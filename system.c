@@ -25,6 +25,53 @@ static void system_clock_init(void)
 void Init_MCU(void)
 {
 	system_clock_init(); //使用内部8M晶振
+	TRISA = 0x00;
+	PORTA = 0x00;
+	ANSELA = 0x00;            //端A全部为输出
+
+	TRISB = 0x00;             //端口B全部为输出
+	PORTB = 0x00;
+	WPUB = 0x00;
+
+	TRISC = 0x00;             //端口C全部为输出
+	PORTC = 0x00;
+
+	TRISD = 0x00;             //端口D全部为输出
+	PORTD = 0x00;
+
+	TRISE = 0x00;             //端口E全部为输出
+	PORTE = 0x00;
+	ANSELE = 0x00;
+
+	TRISF = 0x00;			  //端口F全部为输出
+	PORTF = 0x00;
+	ANSELF = 0x00;
+
+	TRISG = 0x00;
+	PORTG = 0x00;
+	ANSELG = 0x00;
+	WPUG = 0x00;
+
+	IOCBP = 0x00;
+	IOCBN = 0x00;
+	IOCBF = 0x00;
+
+	FVREN = 0;				//禁止固定参考电
+
+	DACEN = 0;
+	C1ON = 0;
+	C2ON = 0;
+	C3ON = 0;
+	SRLEN = 0;
+	TMR1ON = 0;
+	TMR2ON = 0;
+	TMR4ON = 0;
+	TMR6ON = 0;
+	CCP3CON = 0x00;
+	CCP4CON = 0x00;
+	CCP5CON = 0x00;
+	CPSON = 0;
+	LCDEN = 0;
 
 }
 

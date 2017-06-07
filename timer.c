@@ -33,21 +33,27 @@ void Init_TMR0(void)
 	PS0		= 0;				//预分频比1:32 0.25us*32 = 8us
 
 	TMR0IF	= 0;
-	TMR0IE	= 1;				//打开TMR0中断
+	TMR0IE	= 0;				//关闭开TMR0中断
 	TMR0	= 0x7D;				//TMR0计数255(0xff)-(1ms/8us)= 0X82 定时1ms产生一个中断
 
-	GIE		= 1;
-	PEIE	= 1;
 }
+
 
 void Init_TMR6(void)
 {
     //配置 TXCON 控制寄存器
-    T6OUTPS = 0;  //  1:1 后分频比
+    T6OUTPS0 = 0;
+    T6OUTPS1 = 0;  //  1:1 后分频比
+    T6OUTPS2 = 0;
+    T6OUTPS3 = 0;
     TMR6ON = 1;   //使能位
-    T6CKPS = 1;   // 4分频  0.25*4 = 1us
-    PR6 = 100;   //100us中断一次
+    T6CKPS0 = 1;   // 4分频  0.25*4 = 1us
+    T6CKPS1 = 1;
+    PR6 = 10;   // 10us中断一次
     TMR6IE =1;
     TMR6IF =0;
+
+    GIE		= 1;
+	PEIE	= 1;
 }
 

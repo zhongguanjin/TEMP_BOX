@@ -4,6 +4,7 @@
 #include "system.h"
 #include "adc.h"
 #include "uart.h"
+#include "motor.h"
 /*****************************************************************************
  函 数 名  : Init_Sys
  功能描述  : 系统初始化函数
@@ -27,7 +28,7 @@ void Init_Sys(void)
 	Init_UART1();
 	Init_TMR6();
     Init_Motor();
-
+    TMR0IE	= 1;
 }
 
 /*****************************************************************************
@@ -72,15 +73,17 @@ void main(void)
 *****************************************************************************/
 void interrupt ISR(void)
 {
-	if(TMR0IF & TMR0IE)  // 1ms中断一次
-	{
-		TMR0IF = 0;
-		TMR0 = TMR0+TMR0_VALUE;
-		TaskRemarks();  //任务标记轮询处理
-	}
-	if (TMR6IF) // 100us 中断一次
+	if (TMR6IF && TMR6IE) // 10us 中断一次
 	{
 	    TMR6IF = 0;
-        TaskMotorFun();                //电机任务
+        TaskMotorFun();                //电机中断处理函数
 	}
+    if(TMR0IF && TMR0IE)     // 1ms中断一次
+    {
+        TMR0IF = 0;
+        TMR0 = TMR0+TMR0_VALUE;
+        TaskRemarks();       //任务标记轮询处理
+    }
+
+
 }

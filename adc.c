@@ -9,13 +9,10 @@ void Init_ADC(void)
     ANSELF = 0B10001100;              //使能AD引脚RF2/AN7、RF3/AN8
     //PORTF 三态寄存器
 	TRISF  |= 0B10001100;              //将相应的AD引脚设置为输入
-
     ANSA3 = 1;
     TRISA3 = 1;
-
     ANSG4 = 1;
     TRISG4 = 1;
-
 	//A/D 控制寄存器1
 	ADFM   = 1;                         //右对齐
 	ADCS2  = 1;

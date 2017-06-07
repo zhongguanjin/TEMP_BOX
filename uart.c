@@ -2,8 +2,8 @@
 #include "uart.h"
 
 
-#define 	PIC_CLK 		    16000000//4000000                    // 时钟频率
-#define     BAUD                9600                                                 //波特率
+#define 	PIC_CLK 		    16000000                     // 时钟频率
+#define     BAUD                9600                         //波特率
 #define     SPBRGx_VAL          ((PIC_CLK/(16UL * BAUD) -1))
 #define     BUSY                1
 #define     FREE                0
@@ -11,9 +11,6 @@
 #define RX_PIN  TRISC7  //定义数据通讯端口
 #define TX_PIN  TRISC6
 
-static	uint8 usart1_tx_data[64];			//发射的数据数组
-static	uint8	usart1_tx_len;		//发射数据的长度
-volatile static  bit  tx1_sign;
 
 /*****************************************************************************
  函 数 名  : usart1_init
@@ -72,19 +69,35 @@ void Init_UART1(void)
 
 *****************************************************************************/
 
-void usart1_send_byte(char ch)
+void usart1_send_byte(char dat)
 {
-    uint8 uart_cnt  = 0;
-	TXREG=ch;
-	while(!TX1STAbits.TRMT)
+    while(!TX1STAbits.TRMT)		//TRMT=0:正在发送，TRMT=1:发送已完成
 	{
-		uart_cnt  ++;
-		if( uart_cnt  > 1000)
-		{
-			uart_cnt  = 0;
-			break;
-		}
+		continue;
 	}
+	TXREG=dat;
+}
+/*****************************************************************************
+ 函 数 名  : uart_send_str
+ 功能描述  : 发送字符函数
+ 输入参数  : uint8 *s
+ 输出参数  : 无
+ 返 回 值  :
+ 调用函数  :
+ 被调函数  :
+
+ 修改历史      :
+  1.日    期   : 2017年5月27日 星期六
+    作    者   : zgj
+    修改内容   : 新生成函数
+
+*****************************************************************************/
+void uart_send_str( uint8 *s)
+{
+    while(*s!='\0')   // \0表示字符串结束标志，通过检测是否字符串末尾
+    {
+       usart1_send_byte(*s++);
+    }
 }
 
 

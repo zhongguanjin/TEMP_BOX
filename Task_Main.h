@@ -13,13 +13,19 @@ typedef struct _TASK_COMPONENTS
 } TASK_COMPONENTS;              // 任务定义
 
 
-
+uint8 temp_val[5];
+uint8 voltage[6];
+uint8 str1[]= "temp_val = ";
+uint8 str2[]= "*c";
+uint8 str3[]= "voltage =";
+uint8 str4[]= "V";
 void TaskShowTem(void);
 extern void TaskProcess(void);
 extern void TaskRemarks(void);
-uint16 get_temperature(uint8 ad_channel);
+float get_temperature(uint8 ad_channel);
 
 uint16 get_voltage(uint8 ad_channel);
+void TaskMotorCtrl(void);
 
 
 #endif

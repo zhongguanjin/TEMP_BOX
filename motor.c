@@ -1,30 +1,5 @@
 #include "motor.h"
 
-typedef struct
-{
-	uint16  current_pos;  //当前位置
-	uint16	target_pos;   //目标位置
-	uint16  offset;      //偏移值
-	uint16	dst;          //距离
-	uint8	div;          //电机速率
-    uint8   bDirCur :1;    // 方向位 1-运行方向为逆向
-    uint8   bInPlace :1;   //到位标志 1-到位
-    uint8   bStopFlg :1;   //停止标记
-    uint8   bPluseFlg :1;  //脉冲标记，1-高脉冲，0-低脉冲
-}PM_MOTOR;
-
-PM_MOTOR PM[MOTOR_MAX];
-
-
-typedef enum
-{
-    MICROSTEP_FULL = 0,
-    MICROSTEP_1_2,
-    MICROSTEP_1_4,
-    MICROSTEP_1_16,
-    MICROSTEP_MAX
-
-}MOTOR_MICROSTEP;
 /*****************************************************************************
  函 数 名  : Init_Motor
  功能描述  : 电机初始化函数
@@ -43,21 +18,18 @@ typedef enum
 void Init_Motor(void)
 {
     //IO配置为输出
-    TRISA = 0B00001000     //RA3为输入，其他为输出
-    TRISC = 0B11000100     //RC6，7，2为输入 其他为输出
-    //温度电机配置
-    TEMP_MOTOR_RST   = 1;
-    TEMP_MOTOR_DIR   = 1;
-    TEMP_MOTOR_STEP  = 1;
-    TEMP_MOTOR_EN    = 0;     //0有效
-    motor_step_set(TEMP_MOTOR,MICROSTEP_1_16); //1// 1/16步
-
+    TRISA = 0B00001000;     //RA3为输入，其他为输出
+    TRISC = 0B11000100;     //RC6，7，2为输入 其他为输出
     //流量电机配置
-    FLOW_MOTOR_RST 	 = 1;
-    FLOW_MOTOR_DIR 	 = 1;
-    FLOW_MOTOR_STEP  = 1;
-    FLOW_MOTOR_EN 	 = 0;    //0有效
+    FLOW_MOTOR_EN = 0;                           //电机使能
     motor_step_set(FLOW_MOTOR,MICROSTEP_1_16);  // 1/16步
+    PM[FLOW_MOTOR].current_step = 0;
+    motor_stop(FLOW_MOTOR);
+    //温度电机配置
+    TEMP_MOTOR_EN = 0;                           //电机使能
+    motor_step_set(TEMP_MOTOR,MICROSTEP_1_16); //1                                        // 1/16步
+    PM[TEMP_MOTOR].current_step = 0;
+    motor_stop(TEMP_MOTOR);
 }
 /*****************************************************************************
  函 数 名  : motor_microstep_set
@@ -154,50 +126,49 @@ void motor_step_set(MOTOR_DEF mid, uint8 set_vaule)
 *****************************************************************************/
  void motor_dir_set( MOTOR_DEF mid, uint8 dir)
 {
-     if(PM[mid].bStopFlg == 0) //先判断是否停止
-     {
+    // if(PM[mid].bRunFlg == OFF) //先判断是否停止
+    // {
       	if(mid == FLOW_MOTOR)  //流量电机
     	{
-    		if(dir != 0)
+    		if(dir != MOTOR_DIR_POSITIVE)
     		{
-    			PM[mid].bDirCur = 1;  //反向
-                FLOW_MOTOR_DIR  = 1;
+    			PM[mid].bDirCur = MOTOR_DIR_NEGATIVE;  //反向
+                FLOW_MOTOR_DIR  = MOTOR_DIR_NEGATIVE;
     		}
     		else
     		{
-    			PM[mid].bDirCur = 0;  //正向
-                FLOW_MOTOR_DIR  = 0;
+    			PM[mid].bDirCur = MOTOR_DIR_POSITIVE;  //正向
+                FLOW_MOTOR_DIR  = MOTOR_DIR_POSITIVE;
     		}
-    		FLOW_MOTOR_RST = 1;
     	}
         if(mid == TEMP_MOTOR)  //温度电机
             {
-                if(dir != 0)
+                if(dir != MOTOR_DIR_POSITIVE)
                 {
-                	PM[mid].bDirCur = 1;  //反向
-                    TEMP_MOTOR_DIR  = 1;
+                	PM[mid].bDirCur = MOTOR_DIR_NEGATIVE;  //反向
+                    TEMP_MOTOR_DIR  = MOTOR_DIR_NEGATIVE;
                 }
                 else
                 {
-                	PM[mid].bDirCur = 0;  //正向
-                    TEMP_MOTOR_DIR  = 0;
+                	PM[mid].bDirCur = MOTOR_DIR_POSITIVE;  //正向
+                    TEMP_MOTOR_DIR  = MOTOR_DIR_POSITIVE;
                 }
-                TEMP_MOTOR_RST = 1;
             }
-	}
+	//}
 }
 
 /*****************************************************************************
- 函 数 名  : 电机脉冲设定
- 功能描述  :
- 输入参数  : 无
+ 函 数 名  : motor_pluse_set
+ 功能描述  : 电机脉冲高低电平设置
+ 输入参数  : MOTOR_DEF mid
+             uint8 value
  输出参数  : 无
  返 回 值  :
  调用函数  :
  被调函数  :
 
  修改历史      :
-  1.日    期   : 2017年5月26日 星期五
+  1.日    期   : 2017年6月1日 星期四
     作    者   : zgj
     修改内容   : 新生成函数
 
@@ -214,6 +185,42 @@ void motor_pluse_set(MOTOR_DEF mid, uint8 value)
 	}
 }
 
+/*****************************************************************************
+ 函 数 名  : motor_run_pluse
+ 功能描述  : 电机运行脉冲步数
+ 输入参数  : MOTOR_DEF mid
+             uint8 pluse
+ 输出参数  : 无
+ 返 回 值  :
+ 调用函数  :
+ 被调函数  :
+
+ 修改历史      :
+  1.日    期   : 2017年6月1日 星期四
+    作    者   : zgj
+    修改内容   : 新生成函数
+
+*****************************************************************************/
+void motor_run_pluse(MOTOR_DEF mid, uint16 pluse)
+{
+
+  if(PM[mid].bRunFlg == 0)
+  {
+    if(mid == FLOW_MOTOR)
+    {
+    	PM[FLOW_MOTOR].target_step = pluse;
+    	FLOW_MOTOR_RST = MOTOR_SLEEP_OFF;          //启动电机
+    	PM[FLOW_MOTOR].bRunFlg = 1;
+    }
+    else if(mid == TEMP_MOTOR)
+    {
+    	PM[TEMP_MOTOR].target_step = pluse;
+    	TEMP_MOTOR_RST = MOTOR_SLEEP_OFF;
+    	PM[FLOW_MOTOR].bRunFlg = 1;
+    }
+  }
+
+}
 /*****************************************************************************
  函 数 名  : motor_stop
  功能描述  : 步进电机停止
@@ -233,11 +240,13 @@ void motor_pluse_set(MOTOR_DEF mid, uint8 value)
 {
     if(mid == FLOW_MOTOR)
 	{
-		FLOW_MOTOR_RST = 0;
+		FLOW_MOTOR_RST = MOTOR_SLEEP_ON; //关闭电机
+		PM[FLOW_MOTOR].bRunFlg = OFF;
 	}
 	else if(mid == TEMP_MOTOR)
 	{
-		TEMP_MOTOR_RST = 0;
+		TEMP_MOTOR_RST = MOTOR_SLEEP_ON;
+		PM[TEMP_MOTOR].bRunFlg = OFF;
 	}
 }
 
@@ -245,29 +254,37 @@ void motor_pluse_set(MOTOR_DEF mid, uint8 value)
 // 步进电机中断函数
 void TaskMotorFun(void)
 {
-   uint8 index;
-   for(index = 0; index < MOTOR_MAX; index++)
+   MOTOR_DEF mid;
+   for(mid = 0; mid < MOTOR_MAX; mid++)
 	{
-        if(PM[index].bPluseFlg != 0)
+        if(PM[mid].bPluseFlg != 0)
         {
-            motor_pluse_set(index, OFF);
-            PM[index].bPluseFlg = 0;
-        } else
-	    {   //正向
-            if(PM[index].current_step < PM[index].target_step)
+            motor_pluse_set(mid, OFF);
+            PM[mid].bPluseFlg = 0;
+        }
+        else
+	    {
+	        //正向
+            if(PM[mid].current_step < PM[mid].target_step)
             {
-                motor_dir_set(index, 0)
-                PM[index].current_step++;
-                motor_pluse_set(index, ON)
-                PM[index].bPluseFlg = 1;
+                motor_dir_set(mid, MOTOR_DIR_POSITIVE);
+                motor_pluse_set(mid, ON);
+                PM[mid].bPluseFlg = 1;
+                PM[mid].current_step++;
             }
-            else if(PM[index].current_pos > PM[index].target_pos)
-            { // 反向
-                motor_dir_set(index, 1)
-                PM[index].current_step++;
-                motor_pluse_set(index, ON)
-                PM[index].bPluseFlg = 1;
-            }
+            else if(PM[mid].current_step > PM[mid].target_step)
+                { // 反向
+                    motor_dir_set(mid, MOTOR_DIR_NEGATIVE);
+                    motor_pluse_set(mid, ON);
+                    PM[mid].bPluseFlg = 1;
+                    PM[mid].current_step--;
+                }
+                else
+                {
+                   //PM[mid].current_step = PM[mid].target_step;
+                   PM[mid].bPluseFlg = 0;
+                   motor_stop(mid);
+                }
         }
     }
 }
