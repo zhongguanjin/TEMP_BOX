@@ -20,11 +20,6 @@ void Init_Motor(void)
     //IO配置为输出
     TRISA = 0B00001000;     //RA3为输入，其他为输出
     TRISC = 0B11000100;     //RC6，7，2为输入 其他为输出
-    //流量电机配置
-    FLOW_MOTOR_EN = 0;                           //电机使能
-    motor_step_set(FLOW_MOTOR,MICROSTEP_1_16);  // 1/16步
-    PM[FLOW_MOTOR].current_step = 0;
-    motor_stop(FLOW_MOTOR);
     //温度电机配置
     TEMP_MOTOR_EN = 0;                           //电机使能
     motor_step_set(TEMP_MOTOR,MICROSTEP_1_16); //1                                        // 1/16步
@@ -49,7 +44,6 @@ void Init_Motor(void)
 *****************************************************************************/
 void motor_step_set(MOTOR_DEF mid, uint8 set_vaule)
 {
-
     if(mid == FLOW_MOTOR)
     {
         //满步(M1=0, M2=0)
@@ -203,7 +197,6 @@ void motor_pluse_set(MOTOR_DEF mid, uint8 value)
 *****************************************************************************/
 void motor_run_pluse(MOTOR_DEF mid, uint16 pluse)
 {
-
   if(PM[mid].bRunFlg == 0)
   {
     if(mid == FLOW_MOTOR)

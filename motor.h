@@ -35,32 +35,36 @@ typedef enum
     MICROSTEP_MAX
 
 }MOTOR_MICROSTEP;
+
 #define MOTOR_SLEEP_ON     0       //打开睡眠
 #define MOTOR_SLEEP_OFF    1       //关闭睡眠
 
 #define MOTOR_DIR_POSITIVE    0    //正向
 #define MOTOR_DIR_NEGATIVE    1    //反向
 
-#define TEMP_MOTOR_RST 	 LATC4
-#define TEMP_MOTOR_DIR 	 LATC0
-#define TEMP_MOTOR_STEP  LATC3
-#define TEMP_MOTOR_EN 	 LATA6
-#define TEMP_MOTOR_MS1 	 LATA7
-#define TEMP_MOTOR_MS2   LATC5
+
+#define TEMP_MOTOR_DIR 	 LATG4
+#define TEMP_MOTOR_STEP  LATG3
+#define TEMP_MOTOR_EN 	 LATF3
+#define TEMP_MOTOR_MS1 	 LATF4
+#define TEMP_MOTOR_MS2   LATF5
+#define TEMP_MOTOR_RST 	 LATF6
 
 
-#define FLOW_MOTOR_RST 	 LATA0
-#define FLOW_MOTOR_DIR 	 LATA2
 #define FLOW_MOTOR_STEP  LATA1
+#define FLOW_MOTOR_DIR 	 LATA2
 #define FLOW_MOTOR_EN 	 LATC1
 #define FLOW_MOTOR_MS1 	 LATA4
 #define FLOW_MOTOR_MS2   LATA5
+#define FLOW_MOTOR_RST 	 LATA0
 
 extern void motor_step_set(MOTOR_DEF mid, uint8 set_vaule);
 extern void motor_dir_set( MOTOR_DEF mid, uint8 dir);
 extern void motor_pluse_set(MOTOR_DEF mid, uint8 value);
 extern void motor_stop(MOTOR_DEF mid);
+
 extern void TaskMotorFun(void);
+
 extern void Init_Motor(void);
 extern void motor_run_pluse(MOTOR_DEF mid, uint16 pluse);
 #endif

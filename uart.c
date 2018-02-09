@@ -8,8 +8,11 @@
 #define     BUSY                1
 #define     FREE                0
 
-#define RX_PIN  TRISC7  //定义数据通讯端口
-#define TX_PIN  TRISC6
+#define RX2_PIN  TRISG2  //定义数据通讯端口
+#define TX2_PIN  TRISG1
+#define RX1_PIN  TRISC7  //定义数据通讯端口
+#define TX1_PIN  TRISC6
+
 
 
 /*****************************************************************************
@@ -30,8 +33,8 @@
 
 void Init_UART1(void)
 {
-    RX_PIN = 1;
-    TX_PIN = 1;
+    RX1_PIN = 1;
+    TX1_PIN = 1;
 	//配置发送寄存器
     TX1STAbits.TX9D=0;      //无奇偶校验位
     TX1STAbits.TRMT=0;      //发送移位寄存器状态位  0-TSR 已满
@@ -50,9 +53,38 @@ void Init_UART1(void)
     RC1STAbits.SPEN=1;      //串口使能位
 
     SPBRG = SPBRGx_VAL;      //波特率对应初值
-    //RCIE = 1;                //USART1 接收中断允许位
-	//TXIE = 1;
+    RCIE = 1;                //USART1 接收中断允许位
+	TXIE = 0;
+	RCIF = 0;
 }
+
+void Init_UART2(void)
+{
+    RX2_PIN = 1;
+    TX2_PIN = 1;
+	//配置发送寄存器
+    TX2STAbits.TX9D=0;      //无奇偶校验位
+    TX2STAbits.TRMT=0;      //发送移位寄存器状态位  0-TSR 已满
+    TX2STAbits.BRGH = 1;
+    TX2STAbits.SYNC=0;
+    TX2STAbits.TXEN=1;
+    TX2STAbits.TX9=0;       //发送8位
+	//配置接收寄存器
+    RC2STAbits.RX9D=0;      //无奇偶校验位
+    RC2STAbits.OERR=0;
+    RC2STAbits.FERR=0;
+    RC2STAbits.ADDEN=0;
+    RC2STAbits.CREN=1;      //连续接收使能位
+    // RCSTA2bits.SREN=0;
+    RC2STAbits.RX9=0;       //接收8位
+    RC2STAbits.SPEN=1;      //串口使能位
+
+    SPBRG2 = SPBRGx_VAL;      //波特率对应初值
+    RC2IE = 1;                //USART1 接收中断允许位
+	TX2IE = 0;
+	RC2IF = 0;
+}
+
 /*****************************************************************************
  函 数 名  : usart1_send_byte
  功能描述  : USART发送单个字节
@@ -77,27 +109,15 @@ void usart1_send_byte(char dat)
 	}
 	TXREG=dat;
 }
-/*****************************************************************************
- 函 数 名  : uart_send_str
- 功能描述  : 发送字符函数
- 输入参数  : uint8 *s
- 输出参数  : 无
- 返 回 值  :
- 调用函数  :
- 被调函数  :
-
- 修改历史      :
-  1.日    期   : 2017年5月27日 星期六
-    作    者   : zgj
-    修改内容   : 新生成函数
-
-*****************************************************************************/
-void uart_send_str( uint8 *s)
+void usart2_send_byte(char dat)
 {
-    while(*s!='\0')   // \0表示字符串结束标志，通过检测是否字符串末尾
-    {
-       usart1_send_byte(*s++);
-    }
+    while(!TX2STAbits.TRMT)		//TRMT=0:正在发送，TRMT=1:发送已完成
+	{
+		continue;
+	}
+	TX2REG=dat;
 }
+
+
 
 

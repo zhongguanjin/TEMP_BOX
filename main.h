@@ -9,6 +9,9 @@ __CONFIG(0x3EFF);
 
 #define TMR0_VALUE				0x82
 
+typedef int (*consoleCallback)(char * buf, int len);
+extern consoleCallback console_cb;
+
 
 
 /*º¯ÊýÉùÃ÷  */

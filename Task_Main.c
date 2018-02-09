@@ -2,12 +2,12 @@
 /*******************************
 ********时间片轮询法的架构******
 ********************************/
-
-#include "task_main.h"
+#include "Task_Main.h"
 #include "adc.h"
 #include "uart.h"
 #include "stdio.h"
 #include "motor.h"
+#include "dbg.h"
 
 #define tab_len  29
 
@@ -15,14 +15,13 @@
 // 定义结构体变量
 static TASK_COMPONENTS TaskComps[] =
 {
-    {0, 100, 100, TaskMotorCtrl},               //电机控制
-    {0, 2000, 2000, TaskShowTem},               // 显示温度
+    {0, 1000, 1000, TaskShow},               // 显示温度
 };
 
 // 任务清单
 typedef enum _TASK_LIST
 {
-    TAST_MOTOR_CTRL,
+
     TAST_SHOW_TEM,             // 显示温度
     TASKS_MAX                // 总的可供分配的定时任务数目
 } TASK_LIST;
@@ -75,51 +74,23 @@ float get_temperature(uint8 ad_channel)
         }
         mid = (left+right)/2;
     }
-    temp = (((temp_ad-temp_tab[left])*5.0)/(temp_tab[right]-temp_tab[left]))+(mid*5 -30);// 阀值转化成温度
+    temp = ((float)((temp_ad-temp_tab[left])*5)/(temp_tab[right]-temp_tab[left]))
+            +(mid*5 -30);// 阀值转化成温度  放大10倍
     return temp;
-
 }
 
-uint16 get_voltage(uint8 ad_channel)
+float get_voltage(uint8 ad_channel)
 {
-    uint16 Ad_Voltage;
+    float Ad_Voltage;
     Sel_Adc_Channel(ad_channel);
-    Ad_Voltage= read_tem_adc();
-    Ad_Voltage = Ad_Voltage*15/1024+5;
+    Ad_Voltage = (float)(read_tem_adc()*15)/1024+5;
     return Ad_Voltage;
 }
 
 
 /*****************************************************************************
- 函 数 名  : TaskMotorCtrl
- 功能描述  : 电机控制函数
- 输入参数  : void
- 输出参数  : 无
- 返 回 值  :
- 调用函数  :
- 被调函数  :
-
- 修改历史      :
-  1.日    期   : 2017年6月1日 星期四
-    作    者   : zgj
-    修改内容   : 新生成函数
-
-*****************************************************************************/
-
-void TaskMotorCtrl(void)
-{
-    if(get_temperature(ADC_TEMP_MID)==31)
-    {
-        motor_run_pluse(FLOW_MOTOR, 3200);//正传一圈
-    }
-    else
-     {
-        motor_run_pluse(FLOW_MOTOR, 0);//反传一圈
-     }
-}
-/*****************************************************************************
- 函 数 名  : TaskShowTem
- 功能描述  : 温度显示任务
+ 函 数 名  : TaskShow
+ 功能描述  : 显示任务
  输入参数  : void
  输出参数  : 无
  返 回 值  :
@@ -132,18 +103,9 @@ void TaskMotorCtrl(void)
     修改内容   : 新生成函数
 
 *****************************************************************************/
-void TaskShowTem(void)
+void TaskShow(void)
 {
-    sprintf(temp_val,"%.1f",get_temperature(ADC_TEMP_MID));
-    uart_send_str(str1);
-    uart_send_str(temp_val);
-    uart_send_str(str2);
-    usart1_send_byte(' ');
-    sprintf(voltage,"%d",get_voltage(ADC_VREF));
-    uart_send_str(str3);
-    uart_send_str(voltage);
-    uart_send_str(str4);
-    usart1_send_byte('\n');
+    //dbg("test\r\n");
 }
 
 /*****************************************************************************
@@ -195,7 +157,6 @@ void TaskRemarks(void)
 void TaskProcess(void)
 {
     uint8 i;
-
     for (i=0; i<TASKS_MAX; i++)           // 逐个任务时间处理
     {
          if (TaskComps[i].Run)           // 时间不为0

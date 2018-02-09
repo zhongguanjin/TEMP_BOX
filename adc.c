@@ -1,15 +1,16 @@
 
 #include "adc.h"
 
-
-
 void Init_ADC(void)
 {
    // PORTF 模拟选择寄存器
-    ANSELF = 0B10001100;              //使能AD引脚RF2/AN7、RF3/AN8
+    ANSELF = 0B10001100;              //使能AD引脚RF2/AN7、RA3/AN3
+    ANSELA = 0B10001000;              //使能AD引脚RA3/AN3
     //PORTF 三态寄存器
 	TRISF  |= 0B10001100;              //将相应的AD引脚设置为输入
+
     ANSA3 = 1;
+
     TRISA3 = 1;
     ANSG4 = 1;
     TRISG4 = 1;
@@ -45,35 +46,24 @@ void Init_ADC(void)
 *****************************************************************************/
 void Sel_Adc_Channel(uint8 ad_channel)
 {
-
      switch(ad_channel)
 	{
-	    case ADC_VREF:                      //电源电压AD
+	    case ADC_VREF_BAT:                      //电源电压AD
 		{
-		    ADCON0 = (AN_3<<2);
-			//ADC_VAL[ADC_VREF] = read_tem_adc();
+		    ADCON0 = (AN_5<<2);
 			break;
     	}
-		case ADC_TEMP_IN:                   //温度传感器1
+		case ADC_TEMP_TAP:                   //温度传感器1
 		{
 		    ADCON0 = (AN_7<<2);
-			//ADC_VAL[ADC_TEMP_IN] = read_tem_adc();
 			break;
     	}
-		case ADC_TEMP_MID:                   //温度传感器2
+		case ADC_TEMP_SHOWER:                   //温度传感器2
 		{
-		    ADCON0 = (AN_8<<2);
-			//ADC_VAL[ADC_TEMP_MID] = read_tem_adc();
-			break;
-    	}
-		case ADC_WATER_FLOW:                 //流量计
-		{
-			ADCON0 = (AN_12<<2);
-           // ADC_VAL[ADC_WATER_FLOW] = read_tem_adc();
+		    ADCON0 = (AN_3<<2);
 			break;
     	}
 	}
-
 }
 /*****************************************************************************
  函 数 名  :  read_tem_adc
@@ -109,7 +99,6 @@ uint16 read_tem_adc(void)
 	{
 		AD_VAL = (uint16)(ADRESH<<8) + ADRESL;
 	}
-
    return AD_VAL;
 }
 

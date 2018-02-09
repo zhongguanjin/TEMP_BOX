@@ -27,15 +27,12 @@ void Init_TMR0(void)
 	TMR0CS	= 0;				//内部指令周期时钟（16m/4=4MHz 0.25us
 	TMR0SE	= 0;				//在T0CKI 引脚信号从低至高跳变时，递增计数
 	PSA		= 0;				//预分频器分配给Timer0 模块
-
 	PS2		= 1;
 	PS1		= 0;
 	PS0		= 0;				//预分频比1:32 0.25us*32 = 8us
-
 	TMR0IF	= 0;
-	TMR0IE	= 0;				//关闭开TMR0中断
+	TMR0IE	= 1;				//关闭开TMR0中断
 	TMR0	= 0x7D;				//TMR0计数255(0xff)-(1ms/8us)= 0X82 定时1ms产生一个中断
-
 }
 
 
@@ -47,13 +44,10 @@ void Init_TMR6(void)
     T6OUTPS2 = 0;
     T6OUTPS3 = 0;
     TMR6ON = 1;   //使能位
-    T6CKPS0 = 1;   // 4分频  0.25*4 = 1us
+    T6CKPS0 =0;   // 16分频  0.25*16 = 4us
     T6CKPS1 = 1;
-    PR6 = 10;   // 10us中断一次
+    PR6 = 250;   // 1ms中断一次
     TMR6IE =1;
     TMR6IF =0;
-
-    GIE		= 1;
-	PEIE	= 1;
 }
 

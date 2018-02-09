@@ -5,10 +5,9 @@
 
 typedef enum
 {
-    ADC_VREF = 0,            //电源电压  RA3-AN3
-    ADC_TEMP_IN,         //温度1     RF2-AN7
-    ADC_TEMP_MID,        //温度2     RF3-AN8
-    ADC_WATER_FLOW,      //流量计    RG4-AN12
+    ADC_VREF_BAT = 0,        //电源电压  RF7-AN5
+    ADC_TEMP_TAP,         //龙头温度     RF2-AN7
+    ADC_TEMP_SHOWER,        //花洒温度     RA3-AN3
     ADC_MAX
 };
 

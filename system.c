@@ -1,30 +1,48 @@
 
-
 #include "system.h"
+
 
 
 static void system_clock_init(void)
 {
 	OSCSTAT = 0;
 	#if(SYSCLK_FREQ_32MHz == 1)
-		OSCCON = 0b11110010;		//使用内部8M晶振,使能PLL
+	{
+		OSCCON = 0b11110010;		//使用内部32M晶振,使能PLL
+		SYSCLK_Frequency =32;
+    }
 	#elif(SYSCLK_FREQ_16MHz== 1)
+	{
 		OSCCON = 0b01111010;		//使用内部16M晶振
+	    SYSCLK_Frequency =16;
+	}
 	#elif(SYSCLK_FREQ_8MHz == 1)
-		OSCCON = 0b01110010;		//使用内部8M晶振
+    {
+        OSCCON = 0b01110010;		//使用内部8M晶振
+        SYSCLK_Frequency =8;
+    }
 	#elif(SYSCLK_FREQ_4MHz == 1)
+	{
 		OSCCON = 0b01101010;		//使用内部4M晶振
+		SYSCLK_Frequency =4;
+	}
     #elif( SYSCLK_FREQ_2MHz  == 1)
+    {
 		OSCCON = 0b01100010; 		//使用内部2M晶振
+		SYSCLK_Frequency =2;
+	}
     #else
+    {
 		OSCCON = 0b01011010;		//使用内部1M晶振
+		SYSCLK_Frequency =1;
+	}
 	#endif
  	while(!OSCSTATbits.HFIOFR);		//等待晶振稳定
 }
 
 void Init_MCU(void)
 {
-	system_clock_init(); //使用内部8M晶振
+    system_clock_init(); //使用内部8M晶振
 	TRISA = 0x00;
 	PORTA = 0x00;
 	ANSELA = 0x00;            //端A全部为输出

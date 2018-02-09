@@ -138,7 +138,7 @@ extern void flash_copy(const unsigned short * source_addr,unsigned char length,u
 	CARRY=0;if(GIE)CARRY=1;GIE=0;\
 	EECON2=0x55;EECON2=0xAA;WR=1; \
 	NOP(); \
-	if(CARRY)GIE=1 
+	if(CARRY)GIE=1
 
 	// library function version
 extern void flash_erase(unsigned short addr);
@@ -155,16 +155,18 @@ extern void _delay(unsigned long);
 // NOTE: To use the macros below, YOU must have previously defined _XTAL_FREQ
 #define __delay_us(x) _delay((unsigned long)((x)*(_XTAL_FREQ/4000000.0)))
 #define __delay_ms(x) _delay((unsigned long)((x)*(_XTAL_FREQ/4000.0)))
+
 #endif
+
 
 /****************************************************************/
 /****** Global interrupt enable/disable macro definitions *******/
 /****************************************************************/
 #if defined(_PIC14) || defined(_PIC14E)
-	
+
 #ifndef	ei
 #define	ei()	(GIE = 1)	// interrupt enable bit
-#endif  
+#endif
 
 #if defined(_14000) ||  defined(_16C61) || defined(_16C62) ||\
 	defined(_16C63) || defined(_16C63A) || defined(_16C64) ||\
@@ -174,11 +176,11 @@ extern void _delay(unsigned long);
 	defined(_16C765) || defined(_16LC74B)
 	#ifndef	di
 		#define di()	{ do { GIE = 0; } while ( GIE == 1 ); }	// disable interrupt bit
-	#endif  
+	#endif
 #else
 	#ifndef	di
 		#define	di()	(GIE = 0)	// interrupt enable bit
-	#endif  
+	#endif
 #endif
 
 #endif
