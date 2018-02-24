@@ -20,7 +20,7 @@ void Init_ADC(void)
 	ADCS1 = 1;
 	ADCS0 = 0;                      //转换时钟  Fsoc/64  110
 	ADPREF1 = 0;
-	ADPREF0 = 0;                    //选择正参考电压内部参考电压
+	ADPREF0 = 0;
 	ADNREF  = 0;                      //选择负参考电压VSS
 	// A/D 控制寄存器0
 	ADCON0 = 0B00100001;		      //选择相应通道AN8

@@ -62,6 +62,8 @@ void Init_Sys(void)
 	Init_UART2();
 	Init_TMR0();
 	Init_TMR6();
+	Init_Motor();
+	drv_8837_config();
     GIE		= 1;
 	PEIE	= 1;
 }
@@ -215,11 +217,18 @@ int cs_motorTest(char * buf, int len)
 		case 2:
 		{
 		    dbg("2-run\r\n");
+		    motor_run_pulse(para.MID,para.PULSE);
 			break;
 		}
 		case 3:
 		{
 		    dbg("3-stop\r\n");
+		    motor_stop(para.MID);
+			break;
+		}
+		case 4:
+		{
+		    dbg("dst %d\r\n",motor_getPulse(para.MID));
 			break;
 		}
 		default:
@@ -255,7 +264,8 @@ void cs_motorTestMenu(void)
 	dbg("init:1\r\n");
 	dbg("run: 2,mid,dir,pulse\r\n");
 	dbg("stop: 3,mid\r\n");
-	dbg("mid: 0-temp motor,1-flow motor\r\n");
+	dbg("get dst: 4,mid\r\n");
+	dbg("mid: 0-flow motor,1-temp motor\r\n");
 	dbg("dir: 0-POS,1-REV\r\n");
 	dbg("pulse: step num\r\n");
 	dbg("motor>\r\n");
@@ -316,7 +326,6 @@ int cs_drc8837Test(char * buf, int len)
             {
                 dbg("tap close\r\n");
                 drv8837_ctr(DRV8837_TAP, OFF);
-
             }
             else
             {
@@ -345,6 +354,7 @@ int cs_drc8837Test(char * buf, int len)
     }
     memset(para.u,0,sizeof(para));
     cs_drv8837Menu();
+
     return 0;
 
 }
@@ -392,6 +402,8 @@ void cs_drv8837Menu(void)
 *****************************************************************************/
 int console_main(char * buf, int len)
 {
+    GIE		= 0;
+	PEIE	= 0;
 	if(memcmp(buf,"reboot",6) == 0)
 	{
         dbg("reboot\r\n");
@@ -423,9 +435,13 @@ int console_main(char * buf, int len)
 		}
 		default:
 		{
+            GIE     = 1;
+            PEIE    = 1;
             return 1;
 		}
     }
+    GIE		= 1;
+	PEIE	= 1;
 	return 0;
 }
 
@@ -449,7 +465,6 @@ void main(void)
 {
 	Init_Sys();
 	dbg("SYSCLK:%dM\r\n",SYSCLK_Frequency);
-	drv_8837_config();
 	while(1)
 	{
 		static char buf[256];
@@ -506,11 +521,11 @@ void interrupt ISR(void)
     {
         RCIF= 0;
         uart2rx.buf[uart2rx.in++&CONSOLE_RX_BUF_MASK] = (uint8)(RC2REG);
-        //usart2_send_byte(RC2REG);
     }
-	if (TMR6IF && TMR6IE) // 1ms 中断一次
+	if (TMR6IF && TMR6IE) // 100us 中断一次
 	{
 	    TMR6IF = 0;
+	    TaskMotorFun();
 	}
     if(TMR0IF && TMR0IE)     // 1ms中断一次
     {

@@ -46,7 +46,7 @@ void Init_TMR6(void)
     TMR6ON = 1;   //使能位
     T6CKPS0 =0;   // 16分频  0.25*16 = 4us
     T6CKPS1 = 1;
-    PR6 = 250;   // 1ms中断一次
+    PR6 = 10;   // 100us中断一次
     TMR6IE =1;
     TMR6IF =0;
 }
