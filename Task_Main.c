@@ -8,35 +8,79 @@
 #include "stdio.h"
 #include "motor.h"
 #include "dbg.h"
+#include "SoftTimer.h"
+#include "stdlib.h"
+#include "pulse.h"
 
 #define tab_len  29
+
+/*0-空闲 1-初始化 2,工作*/
+enum {
+	MODE_IDLE = 0,
+	MODE_INIT,
+	MODE_DBG,
+	MODE_WORK,
+	MODE_MAX
+};
+
+enum
+{
+    ST_INIT_INIT = 0,
+    ST_INIT_TEMP_RUN,   //流量电机
+    ST_INIT_FLOW_RUN,
+    ST_INIT_END,
+    ST_INIT_MAX
+};
+
+enum
+{
+    ST_DBG_INIT = 0,
+    ST_DBG_RUN,
+    ST_DBG_MAX
+};
+
+
+volatile uint8 dev_mode = 0;
+
+volatile uint8 dev_state = 0;
+
+uint32 overticks=0;
+uint8 msg_id = SRC_MAIN;
+
+
+void Taskpro(void);
+void TasktrIf(void);
+
+
+
+
+void if_init_state(void);
+void if_init_timer(void);
+
+void SetOverTicks(uint32 ticks);
+
+
+
 
 
 // 定义结构体变量
 static TASK_COMPONENTS TaskComps[] =
 {
-    {0, 1000, 1000, TaskShow},               // 显示温度
-};
+    {0, 100, 100, Taskpro},
+    {0, 10, 10, TasktrIf},
 
+};
 // 任务清单
 typedef enum _TASK_LIST
 {
 
-    TAST_SHOW_TEM,             // 显示温度
+    TAST_PRO,             //
+    TASK_TRIF,
     TASKS_MAX                // 总的可供分配的定时任务数目
 } TASK_LIST;
 
- //PT100, 2分法， 查表， 根据电阻的AD 值计算温度。
 
-/*
-uint16 const temp_tab[tab_len] =    //表格是以5度为一步，即-30, -25, - 20.....
- {
-   59  ,79     ,104    ,135    ,171    ,212    ,260    ,312    ,368    ,425    ,       //-30.c  ...15.c
-   484     ,541    ,596    ,647    ,695    ,737    ,776    ,809    ,839    ,864    ,   //20.c   ...  65.c
-   886     ,905    ,921    ,935    ,947    ,957    ,966    ,973    ,980    ,           //70.c   ...  110.c
 
- };
-*/
 uint16 const temp_tab[tab_len] =    //表格是以5度为一步，即-30, -25, - 20.....
  {
    32  ,52     ,77    ,108    ,144    ,185    ,234    ,285    ,339    ,396    ,       //-30.c  ...15.c
@@ -78,7 +122,7 @@ float get_temperature(uint8 ad_channel)
         {
             left = mid;
         }
-    else if(temp_tab[mid] > temp_ad)
+        else if(temp_tab[mid] > temp_ad)
         {
             right = mid;
         }
@@ -98,9 +142,175 @@ float get_voltage(uint8 ad_channel)
 }
 
 
+
+void SetOverTicks(uint32 ticks)
+{
+    overticks= sys_ticks() + ticks;
+}
+
+
+void if_init_state(void)
+{
+    switch ( dev_state)
+    {
+        case ST_INIT_INIT:
+            {
+                trIf_Init(SRC_MAIN, if_init_timer);
+                trIf_start(SRC_MAIN, 1000, TIMER_PERIOD);// 1000ms
+            }
+            break;
+        case ST_INIT_TEMP_RUN:
+            {
+                motor_run_pulse(TEMP_MOTOR,0,3200);
+                SetOverTicks(10000);//5s
+            }
+            break;
+        case ST_INIT_FLOW_RUN:
+            {
+                motor_run_pulse(FLOW_MOTOR,0,3200);
+                 SetOverTicks(10000);//5s
+            }
+            break;
+        case ST_INIT_END:
+            {
+                app_stateSet(ST_DBG_INIT);
+                app_modeSet(MODE_DBG);
+                trIf_stop(SRC_MAIN);
+                set_msgid(SRC_MAIN);
+            }
+            break;
+        default:
+            {
+
+            }
+            break;
+    }
+}
+
+
+void if_init_timer(void)
+{
+    my_printf("start\r\n");
+    switch ( dev_state)
+    {
+        case ST_INIT_INIT:
+            {
+                set_msgid(SRC_MAIN);
+                app_stateSet(ST_INIT_TEMP_RUN);
+            }
+            break;
+        case ST_INIT_TEMP_RUN:
+            {
+                if(PM[TEMP_MOTOR].bRunFlg == 0) //stop
+                {
+                     motor_run_pulse(TEMP_MOTOR,1,3200);
+                     set_msgid(SRC_MAIN);
+                     app_stateSet(ST_INIT_FLOW_RUN);
+                }
+                if(tick_timeout(overticks))
+                {
+                    dbg("over time\r\n");
+                    set_msgid(SRC_MAIN);
+                    app_stateSet(ST_INIT_FLOW_RUN);
+                }
+            }
+            break;
+        case ST_INIT_FLOW_RUN:
+            {
+                if(PM[FLOW_MOTOR].bRunFlg == 0) //stop
+                {
+                     set_msgid(SRC_MAIN);
+                     motor_run_pulse(FLOW_MOTOR,1,3200);
+                     app_stateSet(ST_INIT_END);
+                }
+                if(tick_timeout(overticks))
+                {
+                    dbg("over time\r\n");
+                    set_msgid(SRC_MAIN);
+                    app_stateSet(ST_INIT_END);
+                }
+            }
+            break;
+        case ST_INIT_END:
+            {
+
+            }
+            break;
+        default:
+            break;
+    }
+
+}
+
+
+uint32 place[4]={800,1600,2400,3200};
+uint8  PlaceNo;
+
+
+void if_dbg_timer(void)
+{
+	if(PM[TEMP_MOTOR].bRunFlg == 0) //stop
+	{	// stop
+		if(dev_state == ST_DBG_INIT)
+		{
+			app_stateSet(ST_DBG_RUN);
+			set_msgid(SRC_MAIN);
+		}
+		else
+		{
+			app_stateSet(ST_DBG_INIT);
+			set_msgid(SRC_MAIN);
+		}
+	}
+}
+
+
+void if_dbg_state(void)
+{
+    switch (dev_state)
+    {
+        case ST_DBG_INIT:
+            {
+                trIf_Init(SRC_MAIN, if_dbg_timer);
+                trIf_start(SRC_MAIN, 2000, TIMER_PERIOD);// 1000ms
+            }
+            break;
+        case ST_DBG_RUN:
+            {
+                uint32 dstPls;
+                uint8 randPlace=PlaceNo;
+            	while(randPlace == PlaceNo)
+				{
+					randPlace = (uint8)(rand() & 3) + 1;
+				}
+                dbg("Place:%d\r\n",randPlace);
+			    PlaceNo = randPlace;
+			    dstPls = place[randPlace-1];
+				motor_setPlace(TEMP_MOTOR,dstPls);
+				motor_setPlace(FLOW_MOTOR,dstPls);
+            }
+            break;
+        default:
+            {
+                trIf_stop(SRC_MAIN);
+            }
+            break;
+    }
+
+}
+
+
+
+
+void TasktrIf(void)
+{
+    trIf_Execute();
+}
+
+
 /*****************************************************************************
- 函 数 名  : TaskShow
- 功能描述  : 显示任务
+ 函 数 名  : Taskpro
+ 功能描述  : 进程任务
  输入参数  : void
  输出参数  : 无
  返 回 值  :
@@ -113,10 +323,69 @@ float get_voltage(uint8 ad_channel)
     修改内容   : 新生成函数
 
 *****************************************************************************/
-void TaskShow(void)
+void Taskpro(void)
 {
-    //dbg("test\r\n");
+    if(get_msgid() == SRC_MAIN)
+    {
+       switch (dev_mode)
+       {
+           case MODE_IDLE:
+               {
+                    set_msgid(SRC_MAX);
+                    dbg("idle\r\n");
+               }
+               break;
+           case MODE_INIT:
+               {
+                   set_msgid(SRC_MAX);
+                   if_init_state();
+               }
+               break;
+           case MODE_DBG:
+               {
+                    set_msgid(SRC_MAX);
+                    if_dbg_state();
+               }
+               break;
+           case MODE_WORK:
+               {
+                    set_msgid(SRC_MAX);
+               }
+               break;
+           default:
+               set_msgid(SRC_MAX);
+               break;
+       }
+    }
 }
+
+
+
+
+
+uint8 get_msgid(void)
+{
+
+    return msg_id;
+}
+
+void set_msgid(uint8 id)
+{
+    msg_id = id;
+}
+
+void app_modeSet(uint8 mode)
+{
+     dev_mode = mode;
+     dbg("mode :%d\r\n",dev_mode);
+}
+void app_stateSet(uint8 state)
+{
+     dev_state= state;
+     dbg("state :%d\r\n",dev_state);
+}
+
+
 
 /*****************************************************************************
  函 数 名  : TaskRemarks
@@ -133,6 +402,7 @@ void TaskShow(void)
     修改内容   : 新生成函数
 
 *****************************************************************************/
+
 void TaskRemarks(void)
 {
     uint8 i;
@@ -149,6 +419,7 @@ void TaskRemarks(void)
         }
    }
 }
+
 /*****************************************************************************
  函 数 名  : TaskProcess
  功能描述  : 任务进程函数
@@ -167,11 +438,11 @@ void TaskRemarks(void)
 void TaskProcess(void)
 {
     uint8 i;
-    for (i=0; i<TASKS_MAX; i++)           // 逐个任务时间处理
+    for (i=0; i<TASKS_MAX; i++)                // 逐个任务时间处理
     {
-         if (TaskComps[i].Run)           // 时间不为0
+        if (TaskComps[i].Run)                 // 时间不为0
         {
-             TaskComps[i].TaskHook();         // 运行任务
+             TaskComps[i].TaskHook();        // 运行任务
              TaskComps[i].Run = 0;          // 标志清0
         }
     }

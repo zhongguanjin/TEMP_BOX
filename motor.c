@@ -1,5 +1,7 @@
 #include "motor.h"
 #include "dbg.h"
+
+
 /*****************************************************************************
  函 数 名  : Init_Motor
  功能描述  : 电机初始化函数
@@ -17,21 +19,19 @@
 *****************************************************************************/
 void Init_Motor(void)
 {
-
     A4982_FLOW_IOS_OUTPUT();
     A4982_TEMP_IOS_OUTPUT();
+    motor_speed_set(GEAR_50);
     //温度电机配置
     TEMP_MOTOR_EN = 0;                           //电机使能
     motor_step_set(TEMP_MOTOR,MICROSTEP_1_16); //1                                        // 1/16步
     PM[TEMP_MOTOR].cnt = 0;
     motor_stop(TEMP_MOTOR);
-    dbg("init_motor\r\n");
     //流量电机配置
     FLOW_MOTOR_EN = 0;                           //电机使能
     motor_step_set(FLOW_MOTOR,MICROSTEP_1_16); //1                                        // 1/16步
     PM[FLOW_MOTOR].cnt = 0;
     motor_stop(FLOW_MOTOR);
-
 }
 /*****************************************************************************
  函 数 名  : motor_microstep_set
@@ -76,7 +76,6 @@ void motor_step_set(MOTOR_DEF mid, uint8 set_vaule)
         {
             FLOW_MOTOR_MS1   = 1;
             FLOW_MOTOR_MS2   = 1;
-
         }
    }
    if(mid == TEMP_MOTOR)
@@ -104,10 +103,8 @@ void motor_step_set(MOTOR_DEF mid, uint8 set_vaule)
         {
             TEMP_MOTOR_MS1   = 1;
             TEMP_MOTOR_MS2   = 1;
-
         }
     }
-
 }
 /*****************************************************************************
  函 数 名  : motor_dir_set
@@ -129,28 +126,28 @@ void motor_step_set(MOTOR_DEF mid, uint8 set_vaule)
 {
   	if(mid == FLOW_MOTOR)  //流量电机
 	{
-		if(dir != MOTOR_DIR_POSITIVE)
+		if(dir != CW)
 		{
-			PM[mid].bDirCur = MOTOR_DIR_NEGATIVE;  //反向
-            FLOW_MOTOR_DIR  = MOTOR_DIR_NEGATIVE;
+			PM[mid].bDirCur = CCW;  //反向
+            FLOW_MOTOR_DIR  = CCW;
 		}
 		else
 		{
-			PM[mid].bDirCur = MOTOR_DIR_POSITIVE;  //正向
-            FLOW_MOTOR_DIR  = MOTOR_DIR_POSITIVE;
+			PM[mid].bDirCur = CW;  //正向
+            FLOW_MOTOR_DIR  = CW;
 		}
 	}
     if(mid == TEMP_MOTOR)  //温度电机
     {
-        if(dir != MOTOR_DIR_POSITIVE)
+        if(dir != CW)
         {
-        	PM[mid].bDirCur = MOTOR_DIR_NEGATIVE;  //反向
-            TEMP_MOTOR_DIR  = MOTOR_DIR_NEGATIVE;
+        	PM[mid].bDirCur = CCW;  //反向
+            TEMP_MOTOR_DIR  = CCW;
         }
         else
         {
-        	PM[mid].bDirCur = MOTOR_DIR_POSITIVE;  //正向
-            TEMP_MOTOR_DIR  = MOTOR_DIR_POSITIVE;
+        	PM[mid].bDirCur = CW;  //正向
+            TEMP_MOTOR_DIR  = CW;
         }
     }
 }
@@ -183,6 +180,26 @@ void motor_pulse_set(MOTOR_DEF mid, uint8 value)
 	}
 }
 
+void motor_setPlace(MOTOR_DEF mid,uint32 place)
+{
+    if(PM[mid].bRunFlg != ON) //不在运行
+    {
+        if(mid <MOTOR_MAX)
+        {
+            uint32 pulse;
+            if(place > PM[mid].offset)
+            {
+                pulse = place-PM[mid].offset;
+                motor_run_pulse(mid, 0, pulse);
+            }
+            else
+            {
+                pulse = PM[mid].offset-place;
+                motor_run_pulse(mid, 1, pulse);
+            }
+        }
+    }
+}
 /*****************************************************************************
  函 数 名  : motor_run_pulse
  功能描述  : 电机运行脉冲步数
@@ -199,48 +216,71 @@ void motor_pulse_set(MOTOR_DEF mid, uint8 value)
     修改内容   : 新生成函数
 
 *****************************************************************************/
-void motor_run_pulse(MOTOR_DEF mid,uint16 pulse)
+void motor_run_pulse(MOTOR_DEF mid,uint16 dir,uint32 pulse)
 {
-    //GIE=0;
-    dbg("mp%d,p%d\r\n",mid,pulse);
-    if(mid == FLOW_MOTOR)
+    dbg("mp%d,d%d,p%l\r\n",mid,dir,pulse);
+    if(PM[mid].bRunFlg != ON) //不在运行
     {
-    	PM[FLOW_MOTOR].set = pulse;
-    	FLOW_MOTOR_RST = MOTOR_SLEEP_OFF;          //启动电机
-    	PM[FLOW_MOTOR].bRunFlg = 1;
+        if(mid == FLOW_MOTOR)
+        {
+            if(dir == 0) //正向
+            {
+                motor_dir_set(mid, CW);
+                PM[mid].bDirCur =0;
+            }
+            else
+            {
+                motor_dir_set(mid, CCW);
+                PM[mid].bDirCur =1;
+            }
+        	PM[FLOW_MOTOR].set = pulse;
+        	FLOW_MOTOR_RST = MOTOR_SLEEP_OFF;          //启动电机
+        	PM[FLOW_MOTOR].bRunFlg = 1;
+        }
+        else if(mid == TEMP_MOTOR)
+        {
+            if(dir == 0) //正向
+            {
+                motor_dir_set(mid, CW);
+                PM[mid].bDirCur =0;
+            }
+            else
+            {
+                motor_dir_set(mid, CCW);
+                PM[mid].bDirCur =1;
+            }
+        	PM[TEMP_MOTOR].set = pulse;
+        	TEMP_MOTOR_RST = MOTOR_SLEEP_OFF;
+        	PM[TEMP_MOTOR].bRunFlg = 1;
+        }
+        dbg("d:%l,o:%l,s:%l\r\n",PM[mid].dst,PM[mid].offset,PM[mid].set);
     }
-    else if(mid == TEMP_MOTOR)
+    else
     {
-    	PM[TEMP_MOTOR].set = pulse;
-    	TEMP_MOTOR_RST = MOTOR_SLEEP_OFF;
-    	PM[TEMP_MOTOR].bRunFlg = 1;
+       dbg("err,motor run\r\n");
     }
-   // GIE=1;
 }
 
 
-uint16 motor_getPulse(MOTOR_DEF mid)
+uint32 motor_getPulse(MOTOR_DEF mid)
 {
-
-	uint16 pls;
-	/*
+	uint32 pls;
 	if(PM[mid].set != PM[mid].cnt)
 	{
 		if(PM[mid].bDirCur != 0) //逆向
 		{
-			pls = PM[mid].dst + PM[mid].set - PM[mid].cnt;
+			pls = PM[mid].dst + PM[mid].set -PM[mid].cnt;
 		}
 		else  //正向
 		{
-			pls = PM[mid].dst + PM[mid].cnt - PM[mid].set;
+			pls = PM[mid].dst + PM[mid].cnt -PM[mid].set;
 		}
 	}
-	else
+	else //到位了
 	{
 		pls = PM[mid].offset;
 	}
-	*/
-	pls=PM[mid].cnt;
+    dbg("d:%l,o:%l,s:%l\r\n",PM[mid].dst,PM[mid].offset,PM[mid].set);
 	return pls;
 }
 
@@ -265,19 +305,38 @@ uint16 motor_getPulse(MOTOR_DEF mid)
 	{
 		FLOW_MOTOR_RST = MOTOR_SLEEP_ON; //关闭电机
 		PM[FLOW_MOTOR].bRunFlg = OFF;
+
 	}
 	else if(mid == TEMP_MOTOR)
 	{
 		TEMP_MOTOR_RST = MOTOR_SLEEP_ON;
 		PM[TEMP_MOTOR].bRunFlg = OFF;
 	}
+    if(PM[mid].bDirCur == 0) //正向
+    {
+         PM[mid].dst = PM[mid].dst+PM[mid].cnt;
+    }
+    else
+    {
+         PM[mid].dst = PM[mid].dst-PM[mid].cnt;
+    }
+    PM[mid].offset =PM[mid].dst;
+    PM[mid].cnt=0;
+    PM[mid].set=0;
 }
 
+void motor_speed_set(uint8 gear)
+{
+    PR6 = speed[gear];
+    dbg("speed:%d\r\n",speed[gear]);
+    TMR6IE =1;
+}
 
 // 步进电机中断函数
 void TaskMotorFun(void)
 {
    MOTOR_DEF mid;
+   //GIE = 0;
    for(mid = 0; mid < MOTOR_MAX; mid++)
 	{
 	    if(PM[mid].bRunFlg == ON) //运行
@@ -289,20 +348,11 @@ void TaskMotorFun(void)
             }
             else //高脉冲
     	    {
-    	        //正向
-                if(PM[mid].cnt < PM[mid].set)
+                if(PM[mid].cnt != PM[mid].set)
                 {
+                    motor_pulse_set(mid, ON);
+                    PM[mid].bPluseFlg = 1;
                     PM[mid].cnt++;
-                    motor_dir_set(mid, MOTOR_DIR_POSITIVE);
-                    motor_pulse_set(mid, ON);
-                    PM[mid].bPluseFlg = 1;
-                }
-                else if(PM[mid].cnt > PM[mid].set)
-                {
-                    PM[mid].cnt--;
-                    motor_dir_set(mid, MOTOR_DIR_NEGATIVE);
-                    motor_pulse_set(mid, ON);
-                    PM[mid].bPluseFlg = 1;
                 }
                 else
                 {
@@ -312,6 +362,7 @@ void TaskMotorFun(void)
             }
         }
     }
+    //GIE=1;
 }
 
 

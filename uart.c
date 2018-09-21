@@ -3,10 +3,8 @@
 
 
 #define 	PIC_CLK 		    16000000                     // 时钟频率
-#define     BAUD                9600                         //波特率
-#define     SPBRGx_VAL          ((PIC_CLK/(16UL * BAUD) -1))
-#define     BUSY                1
-#define     FREE                0
+//#define     SPBRGx_VAL          ((PIC_CLK/(16UL * 9600) -1))
+
 
 #define RX2_PIN  TRISG2  //定义数据通讯端口
 #define TX2_PIN  TRISG1
@@ -31,7 +29,7 @@
 
 *****************************************************************************/
 
-void Init_UART1(void)
+void Init_UART1(uint32 baud)
 {
     RX1_PIN = 1;
     TX1_PIN = 1;
@@ -51,14 +49,13 @@ void Init_UART1(void)
     // RCSTA2bits.SREN=0;
     RC1STAbits.RX9=0;       //接收8位
     RC1STAbits.SPEN=1;      //串口使能位
-
-    SPBRG = SPBRGx_VAL;      //波特率对应初值
+    SPBRG = (PIC_CLK/(16UL * baud) -1);      //波特率对应初值
     RCIE = 1;                //USART1 接收中断允许位
 	TXIE = 0;
 	RCIF = 0;
 }
 
-void Init_UART2(void)
+void Init_UART2(uint32 baud)
 {
     RX2_PIN = 1;
     TX2_PIN = 1;
@@ -79,7 +76,7 @@ void Init_UART2(void)
     RC2STAbits.RX9=0;       //接收8位
     RC2STAbits.SPEN=1;      //串口使能位
 
-    SPBRG2 = SPBRGx_VAL;      //波特率对应初值
+    SPBRG2 = (PIC_CLK/(16UL * baud) -1);      //波特率对应初值
     RC2IE = 1;                //USART1 接收中断允许位
 	TX2IE = 0;
 	RC2IF = 0;
@@ -103,19 +100,20 @@ void Init_UART2(void)
 
 void usart1_send_byte(char dat)
 {
+	TXREG=dat;
     while(!TX1STAbits.TRMT)		//TRMT=0:正在发送，TRMT=1:发送已完成
 	{
 		continue;
 	}
-	TXREG=dat;
 }
 void usart2_send_byte(char dat)
 {
+    TX2REG=dat;
     while(!TX2STAbits.TRMT)		//TRMT=0:正在发送，TRMT=1:发送已完成
 	{
 		continue;
 	}
-	TX2REG=dat;
+
 }
 
 

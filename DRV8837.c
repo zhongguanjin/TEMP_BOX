@@ -5,6 +5,8 @@ void drv_8837_config(void)
 {
     TAP_8837_OUT();
     SHOWER_8837_OUT();
+    drv8837_ctr(DRV8837_TAP,OFF);
+    drv8837_ctr(DRV8837_SHOWER,OFF);
 }
 
 uint8 get_8837_state(DRV8837_DEF mid)

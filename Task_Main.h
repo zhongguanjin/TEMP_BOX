@@ -4,7 +4,7 @@
 #include "config.h"
 
 // 任务结构体：
-typedef struct _TASK_COMPONENTS
+typedef struct
 {
     uint8 Run;                 // 程序运行标记：0-不运行，1运行
     uint16 Timer;              // 计时器
@@ -13,14 +13,23 @@ typedef struct _TASK_COMPONENTS
 } TASK_COMPONENTS;              // 任务定义
 
 
-void TaskShow(void);
+
+
+
+
+
+
+
+extern int8 get_msgid(void);
+extern void set_msgid(uint8 id);
+
+
 extern void TaskProcess(void);
 extern void TaskRemarks(void);
-float get_temperature(uint8 ad_channel);
-
-float get_voltage(uint8 ad_channel);
-
-void TaskMotorCtrl(void);
+extern float get_temperature(uint8 ad_channel);
+extern float get_voltage(uint8 ad_channel);
+extern void app_modeSet(uint8 mode);
+extern void app_stateSet(uint8 state);
 
 
 #endif

@@ -11,6 +11,7 @@
 
 
 void  my_printf(const char *pFormat, ...);
+extern void dbg_hex(char *buf,char len);
 
 
 

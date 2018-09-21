@@ -13,13 +13,13 @@ typedef enum
 
 typedef struct
 {
-	uint16  cnt;        //当前步数
-	uint16	set;        //目标位置
-	uint16  offset;     //偏移值
-	int16   dst;        //距离零点的位置
+	uint32  cnt;        //当前步数
+	uint32	set;        //目标位置
+	uint32  offset;     //偏移值
+	uint32   dst;        //距离零点的位置
 	union {
 	    struct{
-            uint8   bDirCur :1;    // 方向位 1-运行方向为逆向
+            uint8   bDirCur :1;    // 方向位 0-正向,1-逆向
             uint8   bRunFlg :1;     //运行标记
             uint8   bInitok :1;   //初始化完成标志
             uint8   bPluseFlg :1;  //脉冲标记，1-高脉冲，0-低脉冲
@@ -30,6 +30,23 @@ typedef struct
 
 PM_MOTOR PM[MOTOR_MAX];
 
+enum
+{
+    GEAR_100=0,
+    GEAR_90,
+    GEAR_80,
+    GEAR_70,
+    GEAR_60,
+    GEAR_50,
+    GEAR_40,
+    GEAR_30,
+    GEAR_20,
+    GEAR_10,
+    GEAR_MAX
+};
+
+const uint8 speed[GEAR_MAX] ={100,90,80,70,60,50,40,30,20,10};
+
 typedef enum
 {
     MICROSTEP_FULL = 0,
@@ -37,18 +54,17 @@ typedef enum
     MICROSTEP_1_4,
     MICROSTEP_1_16,
     MICROSTEP_MAX
-
 }MOTOR_MICROSTEP;
 
 #define MOTOR_SLEEP_ON     0       //打开睡眠
 #define MOTOR_SLEEP_OFF    1       //关闭睡眠
 
-#define MOTOR_DIR_POSITIVE    0    //正向
-#define MOTOR_DIR_NEGATIVE    1    //反向
+#define CW    0    //正向
+#define CCW    1    //反向
 
 
-#define TEMP_MOTOR_DIR 	 LATG4
-#define TEMP_MOTOR_STEP  LATG3
+#define TEMP_MOTOR_STEP  LATG4
+#define TEMP_MOTOR_DIR   LATG3
 #define TEMP_MOTOR_EN 	 LATF3
 #define TEMP_MOTOR_MS1 	 LATF4
 #define TEMP_MOTOR_MS2   LATF5
@@ -86,7 +102,9 @@ extern void motor_pulse_set(MOTOR_DEF mid, uint8 pulse);
 extern void motor_stop(MOTOR_DEF mid);
 
 extern void TaskMotorFun(void);
-extern uint16 motor_getPulse(MOTOR_DEF mid);
+extern uint32 motor_getPulse(MOTOR_DEF mid);
 extern void Init_Motor(void);
-extern void motor_run_pulse(MOTOR_DEF mid, uint16 pulse);
+extern void motor_run_pulse(MOTOR_DEF mid,uint16 dir,uint32 pulse);
+extern void motor_speed_set(uint8 gear);
+extern void motor_setPlace(MOTOR_DEF mid,uint32 place);
 #endif

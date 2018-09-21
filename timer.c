@@ -39,15 +39,31 @@ void Init_TMR0(void)
 void Init_TMR6(void)
 {
     //配置 TXCON 控制寄存器
-    T6OUTPS0 = 0;
-    T6OUTPS1 = 0;  //  1:1 后分频比
+    T6OUTPS0 = 1;
+    T6OUTPS1 = 0;  //  1:10 后分频比 0.25*10 = 2.5us  400khz
     T6OUTPS2 = 0;
-    T6OUTPS3 = 0;
+    T6OUTPS3 = 1;
     TMR6ON = 1;   //使能位
-    T6CKPS0 =0;   // 16分频  0.25*16 = 4us
-    T6CKPS1 = 1;
-    PR6 = 10;   // 100us中断一次
-    TMR6IE =1;
+    T6CKPS0 =1;   // 4分频  2.5*4 = 10us  100k
+    T6CKPS1 = 0;
+    //PR6 = 20;//20;   // 50-500us中断一次  pwm_period=1ms(1khz)   (20-200us一次 pwm_period=400us(2.5khz))
+    TMR6IE =0;
     TMR6IF =0;
+}
+
+
+void Init_TMR2(void)
+{
+    //配置 TXCON 控制寄存器
+    T2OUTPS0 = 1;
+    T2OUTPS1 = 0;  //  1:10 后分频比 0.25*10 = 2.5us  400khz
+    T2OUTPS2 = 0;
+    T2OUTPS3 = 1;
+    TMR2ON = 1;   //使能位
+    T2CKPS0 =1;   // 4分频  2.5*4 = 10us  100k
+    T2CKPS1 = 0;
+    PR2 = 50;//20;   // 50-500us中断一次  pwm_period=1ms(1khz)   (20-200us一次 pwm_period=400us(2.5khz))
+    TMR2IE =1;
+    TMR2IF =0;
 }
 

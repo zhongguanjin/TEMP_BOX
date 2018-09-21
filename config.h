@@ -17,6 +17,9 @@ typedef unsigned long long	ullong;
 #define ON         1
 #define OFF        0
 
+#define OK		(1)
+#define ERR		(0)
+
 
 
 #endif

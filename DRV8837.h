@@ -19,14 +19,14 @@ uint8 shower_state;
 #define TAP_8837_IN2_PIN				    LATD5
 #define TAP_8837_IN1_PIN				    LATD6
 
-#define SHOWER_8837_IN2_PIN				LATE7
-#define SHOWER_8837_IN1_PIN				LATD0
+#define SHOWER_8837_IN2_PIN				LATE3
+#define SHOWER_8837_IN1_PIN				LATE4
 
 
 
 #define     TAP_8837_OUT()              {TRISD5 = 0;TRISD6 = 0;}
 
-#define     SHOWER_8837_OUT()           { TRISD0 = 0;TRISE7 = 0;}
+#define     SHOWER_8837_OUT()           { TRISE3 = 0;TRISE4 = 0;}
 
 extern void drv_8837_config(void);
 extern void drv8837_ctr(DRV8837_DEF mid,uint8 state);
