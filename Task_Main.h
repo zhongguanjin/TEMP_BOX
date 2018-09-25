@@ -15,6 +15,12 @@ typedef struct
 
 
 
+typedef enum
+{
+    SRC_MAIN=0,
+    SRC_MAX
+}SRC_DEF;
+
 
 
 

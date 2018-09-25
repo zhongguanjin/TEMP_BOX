@@ -10,8 +10,8 @@
 #include "dbg.h"
 #include "SoftTimer.h"
 #include "stdlib.h"
-#include "pulse.h"
-
+//#include "pulse.h"
+#include "timer.h"
 #define tab_len  29
 
 /*0-空闲 1-初始化 2,工作*/
@@ -49,13 +49,16 @@ uint8 msg_id = SRC_MAIN;
 
 
 void Taskpro(void);
-void TasktrIf(void);
 
 
 
 
 void if_init_state(void);
-void if_init_timer(void);
+int if_init_timer(void *pArg);
+
+int if_dbg_timer(void *pArg);
+
+void if_dbg_state(void);
 
 void SetOverTicks(uint32 ticks);
 
@@ -67,7 +70,6 @@ void SetOverTicks(uint32 ticks);
 static TASK_COMPONENTS TaskComps[] =
 {
     {0, 100, 100, Taskpro},
-    {0, 10, 10, TasktrIf},
 
 };
 // 任务清单
@@ -75,7 +77,6 @@ typedef enum _TASK_LIST
 {
 
     TAST_PRO,             //
-    TASK_TRIF,
     TASKS_MAX                // 总的可供分配的定时任务数目
 } TASK_LIST;
 
@@ -151,12 +152,12 @@ void SetOverTicks(uint32 ticks)
 
 void if_init_state(void)
 {
+    TIMER_TABLE* ptnode;
     switch ( dev_state)
     {
         case ST_INIT_INIT:
             {
-                trIf_Init(SRC_MAIN, if_init_timer);
-                trIf_start(SRC_MAIN, 1000, TIMER_PERIOD);// 1000ms
+              ptnode=CreatTimer(1000, PERIOIC, if_init_timer, NULL);
             }
             break;
         case ST_INIT_TEMP_RUN:
@@ -175,7 +176,7 @@ void if_init_state(void)
             {
                 app_stateSet(ST_DBG_INIT);
                 app_modeSet(MODE_DBG);
-                trIf_stop(SRC_MAIN);
+                //KillTimer(ptnode);
                 set_msgid(SRC_MAIN);
             }
             break;
@@ -188,9 +189,8 @@ void if_init_state(void)
 }
 
 
-void if_init_timer(void)
+int if_init_timer(void *pArg)
 {
-    my_printf("start\r\n");
     switch ( dev_state)
     {
         case ST_INIT_INIT:
@@ -239,7 +239,7 @@ void if_init_timer(void)
         default:
             break;
     }
-
+    return 0;
 }
 
 
@@ -247,7 +247,7 @@ uint32 place[4]={800,1600,2400,3200};
 uint8  PlaceNo;
 
 
-void if_dbg_timer(void)
+int if_dbg_timer(void *pArg)
 {
 	if(PM[TEMP_MOTOR].bRunFlg == 0) //stop
 	{	// stop
@@ -262,17 +262,19 @@ void if_dbg_timer(void)
 			set_msgid(SRC_MAIN);
 		}
 	}
+	    return 0;
 }
+
 
 
 void if_dbg_state(void)
 {
+    TIMER_TABLE* ptnode;
     switch (dev_state)
     {
         case ST_DBG_INIT:
             {
-                trIf_Init(SRC_MAIN, if_dbg_timer);
-                trIf_start(SRC_MAIN, 2000, TIMER_PERIOD);// 1000ms
+                ptnode=CreatTimer(1000, PERIOIC, if_dbg_timer, NULL);
             }
             break;
         case ST_DBG_RUN:
@@ -292,7 +294,7 @@ void if_dbg_state(void)
             break;
         default:
             {
-                trIf_stop(SRC_MAIN);
+                //KillTimer(ptnode);
             }
             break;
     }
@@ -301,11 +303,6 @@ void if_dbg_state(void)
 
 
 
-
-void TasktrIf(void)
-{
-    trIf_Execute();
-}
 
 
 /*****************************************************************************

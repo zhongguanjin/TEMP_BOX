@@ -12,7 +12,9 @@
 #include "SoftTimer.h"
 #include "rgb.h"
 
-#include "pulse.h"
+//#include "pulse.h"
+
+
 /*****************************************************************************
  函 数 名  : Init_Sys
  功能描述  : 系统初始化函数
@@ -64,9 +66,11 @@ void main(void)
 {
 	Init_Sys();
 	dbg("SYSCLK:%dM\r\n",SYSCLK_Frequency);
+	TimersInit(SystemTicksCount);
 	app_modeSet(1);
 	while(1)
 	{
+	    //ProcessTimer();
 	    com2_rxDeal();
 	    TaskProcess();            // 任务处理
 	    CLRWDT();
