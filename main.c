@@ -34,6 +34,7 @@ void Init_Sys(void)
 	Init_ADC();
 	rgb_init();
 	com_init(com2,9600);
+    com_init(com1,19200);
 	Init_TMR0();
 	Init_TMR6();
 	Init_Motor();
@@ -68,6 +69,7 @@ void main(void)
 	while(1)
 	{
 	    com2_rxDeal();
+	    com1_rxDeal();
 	    TaskProcess();            // 任务处理
 	    CLRWDT();
 	}
@@ -94,6 +96,11 @@ void interrupt ISR(void)
     {
         RCIF= 0;
         USART2_RXHandler(RC2REG);
+    }
+    if(RCIE &&RCIF)
+    {
+        RCIF= 0;
+        USART1_RXHandler(RCREG);
     }
 	if (TMR6IF && TMR6IE) // 200us 中断一次
 	{

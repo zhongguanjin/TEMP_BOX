@@ -11,6 +11,10 @@
 #include "SoftTimer.h"
 #include "stdlib.h"
 #include "pulse.h"
+#include "com.h"
+
+#include "system.h"
+#include "DRV8837.h"
 
 #define tab_len  29
 
@@ -22,6 +26,7 @@ enum {
 	MODE_WORK,
 	MODE_MAX
 };
+
 
 enum
 {
@@ -36,6 +41,7 @@ enum
 {
     ST_DBG_INIT = 0,
     ST_DBG_RUN,
+    ST_DBG_ZERO,
     ST_DBG_MAX
 };
 
@@ -47,7 +53,7 @@ volatile uint8 dev_state = 0;
 uint32 overticks=0;
 uint8 msg_id = SRC_MAIN;
 
-
+uint8 Recv_Buf[13];
 void Taskpro(void);
 void TasktrIf(void);
 
@@ -58,10 +64,14 @@ void if_init_state(void);
 void if_init_timer(void);
 
 void SetOverTicks(uint32 ticks);
+uint8 CRC8_SUM(void *p,uint8 len);
+void send_dat(void *p,uint8 len);
+void com1_txDeal(void);
 
+uint8 Flat_St;//盖板状态 1-翻盖 0-着落
 
-
-
+uint8 drain_state;
+uint8 check_mode=0;//0-near 1-leave
 
 // 定义结构体变量
 static TASK_COMPONENTS TaskComps[] =
@@ -174,7 +184,7 @@ void if_init_state(void)
         case ST_INIT_END:
             {
                 app_stateSet(ST_DBG_INIT);
-                app_modeSet(MODE_DBG);
+                app_modeSet(MODE_IDLE);
                 trIf_stop(SRC_MAIN);
                 set_msgid(SRC_MAIN);
             }
@@ -258,7 +268,7 @@ void if_dbg_timer(void)
 		}
 		else
 		{
-			app_stateSet(ST_DBG_INIT);
+			app_stateSet(ST_DBG_RUN);
 			set_msgid(SRC_MAIN);
 		}
 	}
@@ -267,6 +277,7 @@ void if_dbg_timer(void)
 
 void if_dbg_state(void)
 {
+    static uint8 st=0;
     switch (dev_state)
     {
         case ST_DBG_INIT:
@@ -304,7 +315,7 @@ void if_dbg_state(void)
 
 void TasktrIf(void)
 {
-    trIf_Execute();
+    //trIf_Execute();
 }
 
 
@@ -323,8 +334,60 @@ void TasktrIf(void)
     修改内容   : 新生成函数
 
 *****************************************************************************/
-void Taskpro(void)
+void Taskpro(void)//100ms
 {
+    com1_txDeal();
+    static uint8 hold_time=0;
+    switch (dev_mode)
+    {
+        case MODE_IDLE:
+            {
+                if(((RadarInfo.check_st&0x01) == 0x01)&&(drain_state == OFF))
+                {
+                    Flat_St=1;
+
+                    drv8800_open();
+                    dbg("open\r\n");
+                    app_modeSet(MODE_DBG);
+                }
+                else if(((RadarInfo.check_st&0x01) == 0x00)&&(drain_state == ON))
+                {
+                    Flat_St=0;
+                    dbg("close\r\n");
+                    drv8800_close();
+                    app_modeSet(MODE_DBG);
+                }
+            }
+            break;
+        case MODE_INIT:
+            {
+                app_modeSet(MODE_IDLE);
+            }
+            break;
+        case MODE_DBG:
+            {
+                if((hold_time++)>=8)
+                {
+                     if(Flat_St ==1 )
+                     {
+                        drain_state=ON;
+                        //check_mode = 0x01;//离开
+                     }
+                     else
+                     {
+                        drain_state=OFF;
+                        //check_mode = 0x00;//靠近
+                     }
+                     drv8800_stop();
+                     hold_time=0;
+                     app_modeSet(MODE_IDLE);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    /*
     if(get_msgid() == SRC_MAIN)
     {
        switch (dev_mode)
@@ -349,14 +412,14 @@ void Taskpro(void)
                break;
            case MODE_WORK:
                {
-                    set_msgid(SRC_MAX);
+                  set_msgid(SRC_MAX);
                }
                break;
            default:
                set_msgid(SRC_MAX);
                break;
        }
-    }
+    }*/
 }
 
 
@@ -384,8 +447,207 @@ void app_stateSet(uint8 state)
      dev_state= state;
      dbg("state :%d\r\n",dev_state);
 }
+/*****************************************************************************
+ 函 数 名  : CRC8_SUM
+ 功能描述  : CRC校验函数
+ 输入参数  : void *p
+             uint8 len
+ 输出参数  : crc8        --check sum
+ 返 回 值  :
+ 调用函数  :
+ 被调函数  :
 
+ 修改历史      :
+  1.日    期   : 2017年6月30日 星期五
+    作    者   : zgj
+    修改内容   : 新生成函数
 
+*****************************************************************************/
+uint8 CRC8_SUM(void *p,uint8 len)
+{
+    uint8 crc8 = 0;
+    uint8 *temp =p;
+    for(uint8 i=0;i<len;i++)
+    {
+        crc8 ^=*temp;
+        temp++;
+    }
+    return crc8;
+}
+
+void Serial_Processing(void)
+{
+    memcpy(Rfrx.rxbuf,Recv_Buf,sizeof(Rfrx.rxbuf));
+    RadarInfo.check_st = Rfrx.dat[2];
+    RadarInfo.psd = Rfrx.dat[3];
+    //dbg_hex(Rfrx.rxbuf,13);
+}
+
+void com1_rxDeal(void)
+{
+    uint8 ch;
+    static uint8 check_sum = 0;
+    static uint8 index=0;
+    static uint8 st=0;
+    if(com_rxLeft(com1) != 0)
+    {
+        while(1)
+        {
+            if(OK == com_getch(com1,&ch))
+            {
+                switch(st)
+                {
+                    case RX_START_ST: //0x32
+                    {
+                        index = 0;
+                        if(ch != 0x32)
+                        {
+                            st=RX_START_ST;
+                            break;
+                        }
+                        check_sum = 0;
+                        Recv_Buf[index]=ch;
+                        index++;
+                        st=RX_SPARE1_ST;
+                        break;
+                    }
+                    case RX_SPARE1_ST://0x53
+                    {
+                        if(ch == 0x32) //排重问题
+                        {
+                            index=0;
+                            Recv_Buf[index]=ch;
+                            index++;
+                            st=RX_SPARE1_ST;
+                        }
+                        else if(ch == 0x35)
+                        {
+                            check_sum =ch;
+                            Recv_Buf[index]=ch;
+                            index++;
+                            st=RX_SPARE2_ST;
+                        }
+                        else
+                        {
+                           st=RX_START_ST;
+                        }
+                        break;
+                    }
+                    case RX_SPARE2_ST://0x06
+                    {
+                        if(ch == 0x32)
+                        {
+                            index =0;
+                            Recv_Buf[index]=ch;
+                            index++;
+                            st=RX_SPARE1_ST;
+                        }
+                        else if(ch == 0x06)
+                        {
+                            check_sum ^=ch;
+                            Recv_Buf[index]=ch;
+                            index++;
+                            st=RX_DATA_ST;
+                        }
+                        else
+                        {
+                           st=RX_START_ST;
+                        }
+                        break;
+                    }
+                    case RX_DATA_ST: //dat
+                    {
+                        Recv_Buf[index]=ch;
+                        check_sum ^=ch;
+                        index++;
+                        if(index == 11)
+                        {
+                            st =RX_CHK_ST;
+                        }
+                        break;
+                    }
+                    case RX_CHK_ST: //check_sum
+                        {
+                            if(ch ==check_sum)
+                            {
+                                st=RX_END_ST;
+                                Recv_Buf[index]=ch;
+                                index++;
+                            }
+                            else
+                            {
+                               st=RX_START_ST;
+                            }
+                            break;
+                        }
+                    case RX_END_ST:
+                        {
+                            if(ch ==0x34)
+                            {
+                                Recv_Buf[index]=ch;
+                                //Recv_ok=1;
+                                Serial_Processing();
+                            }
+                            st=RX_START_ST;
+                            break;
+                        }
+                    default:
+                        index = 0;
+                        st=RX_START_ST;
+                        break;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+}
+
+void com1_txDeal(void)
+{
+    Rftx.sta_num = 0x32;
+    Rftx.spare1 = 0x53;
+    Rftx.spare2 = 0xD6;
+    Rftx.dat[2] =Flat_St;    //盖板状态
+    Rftx.dat[3] =check_mode; //检测模式
+    Rftx.crc_num = CRC8_SUM(&Rftx.spare1,BUF_SIZE-3);
+    Rftx.end1_num = 0x34;
+    send_dat(Rftx.txbuf,BUF_SIZE);
+}
+
+/*****************************************************************************
+ 函 数 名  : send_dat
+ 功能描述  : 串口发送一串数据
+ 输入参数  : void *p     --指向串口数据结构体的指针
+             uint8 len   --数据长度
+             uint8 cnt   --重复次数
+ 输出参数  : 无
+ 返 回 值  :
+ 调用函数  :
+ 被调函数  :
+
+ 修改历史      :
+  1.日    期   : 2017年6月30日 星期五
+    作    者   : zgj
+    修改内容   : 新生成函数
+
+*****************************************************************************/
+void send_dat(void *p,uint8 len)
+{
+    uint8 *temp =p;
+    delay_us(500);
+    for(uint8 j=0;j<len;j++)
+    {
+        usart1_send_byte(*temp);
+        if(j<len-1) //j<15
+        {
+            temp++;
+        }
+    }
+    delay_ms(5);
+}
 
 /*****************************************************************************
  函 数 名  : TaskRemarks

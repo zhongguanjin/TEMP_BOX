@@ -23,6 +23,14 @@ uint8 shower_state;
 #define SHOWER_8837_IN1_PIN				LATE4
 
 
+#define DRAIN_8800_DIR               LATC4
+#define DRAIN_8800_MODE              LATC5
+#define DRAIN_8800_SLEEP             LATC3
+#define DRAIN_8800_EN                LATC2
+
+
+#define     DRAIN_8800_OUT()              {TRISC2 = 0;TRISC3 = 0;TRISC4 = 0;TRISC5 = 0;}
+
 
 #define     TAP_8837_OUT()              {TRISD5 = 0;TRISD6 = 0;}
 
@@ -31,6 +39,10 @@ uint8 shower_state;
 extern void drv_8837_config(void);
 extern void drv8837_ctr(DRV8837_DEF mid,uint8 state);
 extern uint8 get_8837_state(DRV8837_DEF mid);
+
+extern void drv8800_open(void);
+extern void drv8800_close(void);
+extern void drv8800_stop(void);
 
 
 #endif
