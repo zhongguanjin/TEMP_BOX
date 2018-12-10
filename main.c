@@ -96,7 +96,7 @@ void interrupt ISR(void)
 {
     if(RC2IE &&RC2IF)
     {
-        RCIF= 0;
+        RC2IF= 0;
         USART2_RXHandler(RC2REG);
     }
 	if (TMR6IF && TMR6IE) // 200us ÷–∂œ“ª¥Œ

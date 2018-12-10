@@ -104,7 +104,7 @@ int TimersInit(TMRSOURCE pfTimer);
 * 输出参数：无
 * 返 回 值：操作失败 : NULL
            操作成功 : 定时器模块指针
-* 其它说明：创建完定时器后返回定时器结点的地址，改地址用于重启或删除该定时器
+* 其它说明：创建完定时器后返回定时器结点的地址，该地址用于重启或删除该定时器
 **************************************************************************/
 TIMER_TABLE* CreatTimer(uint32 dwTimeout, uint8 ucPeriodic, TMRCALLBACK pfTimerCallback, void *pArg);
 

@@ -13,9 +13,9 @@
 #include "SoftTimer.h"
 #include "stdio.h"
 #include "string.h"
-#include<stdlib.h>
+#include <stdlib.h>
 
-static TIMER_TABLE* sg_ptTimeTableHead = NULL;             /* 链表表头       */
+static TIMER_TABLE* sg_ptTimeHead = NULL;             /* 链表表头       */
 static TMRSOURCE    sg_pfSysClk        = NULL;             /* 系统1ms时钟函数 */
 static unsigned long    sg_dwTimeMaxValue  = MAX_VALUE_32_BIT; /* 最大ms数       */
 
@@ -35,14 +35,14 @@ int TimersInit(TMRSOURCE pfTimer)
         return SW_ERROR; /* 检查注册函数是否为空指针 */
     }
 
-    sg_ptTimeTableHead = (TIMER_TABLE*)malloc(sizeof(TIMER_TABLE)); /* 申请头结点 */
-    if (NULL == sg_ptTimeTableHead)
+    sg_ptTimeHead = (TIMER_TABLE*)malloc(sizeof(TIMER_TABLE)); /* 申请头结点 */
+    if (NULL == sg_ptTimeHead)
     {
         return SW_ERROR; /* 检查是否申请成功 */
     }
 
     /* 申请成功后进行初始化 */
-    sg_ptTimeTableHead->next = NULL;               /* 下个结点地址置空     */
+    sg_ptTimeHead->next = NULL;               /* 下个结点地址置空     */
     sg_pfSysClk              = (TMRSOURCE)pfTimer; /* 注册系统1ms时钟函数  */
     return SW_OK;
 }
@@ -65,7 +65,7 @@ TIMER_TABLE* CreatTimer(uint32 dwTimeout, uint8 ucPeriodic, TMRCALLBACK pfTimerC
 {
     TIMER_TABLE* ptTimerNode;
     TIMER_TABLE* ptFind;
-    if (NULL == sg_ptTimeTableHead)
+    if (NULL == sg_ptTimeHead)
     {
         return NULL; /* 检查链表头节点是否存在 */
     }
@@ -88,7 +88,7 @@ TIMER_TABLE* CreatTimer(uint32 dwTimeout, uint8 ucPeriodic, TMRCALLBACK pfTimerC
     ptTimerNode->data.pArg            = pArg;                    /* 回调函数参数 */
 
     /* 将新申请的定时器结点增加进入链表 */
-    ptFind = sg_ptTimeTableHead; /* 先找链表头结点 */
+    ptFind = sg_ptTimeHead; /* 先找链表头结点 */
     while(NULL != ptFind->next)  /* 如果当前结点不是末尾结点*/
     {
         ptFind = ptFind->next;   /* 将下一个结点的地址作为当前结点继续查找 */
@@ -120,7 +120,7 @@ int KillTimer(TIMER_TABLE* ptNode)
     }
 
     /* 定时器结点不为空 */
-    ptFind = sg_ptTimeTableHead; /* 先找到头结点 */
+    ptFind = sg_ptTimeHead; /* 先找到头结点 */
     while (ptFind) /* 如果不是末尾结点 */
     {
         if (ptFind->next == ptNode)      /* 检查下一结点是否为需删除结点 */
@@ -169,11 +169,11 @@ int ProcessTimer(void)
 {
     TIMER_TABLE* ptFind;
     TIMER_TABLE* ptNodeFree;
-    if (NULL == sg_ptTimeTableHead)
+    if (NULL == sg_ptTimeHead)
     {
         return SW_ERROR; /* 检查是否申请成功 */
     }
-    ptFind = sg_ptTimeTableHead->next;    /* 找到第一个有效结点 */
+    ptFind = sg_ptTimeHead->next;    /* 找到第一个有效结点 */
     while(ptFind)                         /* 如果不是末尾结点 */
     {
         ptFind->data.now = sg_pfSysClk(); /* 更新时间 */
