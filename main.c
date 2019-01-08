@@ -13,6 +13,18 @@
 #include "rgb.h"
 
 #include "pulse.h"
+
+
+void wdt_enable(void)
+{
+    SWDTEN =1;
+    WDTCONbits.WDTPS =0x0B;
+}
+void wdt_disable(void)
+{
+    SWDTEN =0;
+}
+
 /*****************************************************************************
  函 数 名  : Init_Sys
  功能描述  : 系统初始化函数
@@ -33,10 +45,11 @@ void Init_Sys(void)
 	Init_MCU();
 	Init_ADC();
 	rgb_init();
-	com_init(com2,9600);
+	//com_init(com2,9600);
+	com_init(com1,19200);
 	Init_TMR0();
-	Init_TMR6();
-	Init_Motor();
+	//Init_TMR6();
+	//Init_Motor();
 	drv_8837_config();
     GIE		= 1;
 	PEIE	= 1;
@@ -62,12 +75,15 @@ void Init_Sys(void)
 
 void main(void)
 {
+    wdt_disable();
 	Init_Sys();
+	wdt_enable();
 	dbg("SYSCLK:%dM\r\n",SYSCLK_Frequency);
 	app_modeSet(1);
 	while(1)
 	{
-	    com2_rxDeal();
+	    //com2_rxDeal();
+	    com1_rxDeal();
 	    TaskProcess();            // 任务处理
 	    CLRWDT();
 	}
@@ -90,17 +106,26 @@ void main(void)
 *****************************************************************************/
 void interrupt ISR(void)
 {
-    if(RC2IE &&RC2IF)
+/*
+    if(RC2IE && RC2IF)
     {
-        RCIF= 0;
+        RC2IF= 0;
         USART2_RXHandler(RC2REG);
     }
+    */
+    if(RCIE && RCIF)
+    {
+        RCIF= 0;
+        USART1_RXHandler(RCREG);
+    }
+    /*
 	if (TMR6IF && TMR6IE) // 200us 中断一次
 	{
 	    TMR6IF = 0;
 	    //TaskMotorISR();
 	    TaskMotorFun();
 	}
+    */
     if(TMR0IF && TMR0IE)     // 1ms中断一次
     {
         TMR0IF = 0;

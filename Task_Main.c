@@ -12,7 +12,45 @@
 #include "stdlib.h"
 #include "pulse.h"
 
+#include "com.h"
 #define tab_len  29
+
+
+
+#define ComRx_START 0x02
+#define ComRx_SPARE 0x3A
+#define ComRx_END1  0x0B
+#define ComRx_END2  0x04
+#define ComRx_ADDR  0x01
+
+#define ComTx_START 0x02
+#define ComTx_SPARE 0xA3
+#define ComTx_END1  0x0F
+#define ComTx_END2  0x04
+
+#define ComTx_ADDR  0x01
+
+#define     BUF_SIZE   32
+#define     crc_len    (BUF_SIZE-5)
+
+typedef  union
+{
+      struct
+      {
+          uint8 sta_num;
+          uint8 spare1;
+          uint8 dev_addr;
+          uint8 dat[BUF_SIZE-6];
+          uint8 crc_num;
+          uint8 end1_num;
+          uint8 end2_num;
+      };
+      uint8 buf[BUF_SIZE];
+} ComBuf_t;
+
+ComBuf_t com1buf;
+
+uint8 temp_arry[2] = {0,0};
 
 /*0-空闲 1-初始化 2,工作*/
 enum {
@@ -53,7 +91,7 @@ void TasktrIf(void);
 
 
 
-
+void com1_txDeal(void);
 void if_init_state(void);
 void if_init_timer(void);
 
@@ -61,23 +99,17 @@ void SetOverTicks(uint32 ticks);
 
 
 
+#define TASKS_MAX 2
 
 
 // 定义结构体变量
 static TASK_COMPONENTS TaskComps[] =
 {
-    {0, 100, 100, Taskpro},
-    {0, 10, 10, TasktrIf},
+    {0, 500, 500, Taskpro},
+    {0, 500, 500, TasktrIf},
 
 };
-// 任务清单
-typedef enum _TASK_LIST
-{
 
-    TAST_PRO,             //
-    TASK_TRIF,
-    TASKS_MAX                // 总的可供分配的定时任务数目
-} TASK_LIST;
 
 
 
@@ -88,6 +120,176 @@ uint16 const temp_tab[tab_len] =    //表格是以5度为一步，即-30, -25, - 20.....
    859     ,878    ,894    ,908    ,920    ,930    ,939    ,946    ,953    ,           //70.c   ...  110.c
 
  };
+
+/*****************************************************************************
+ 函 数 名  : com1_rxDeal
+ 功能描述  : com1接收处理
+ 输入参数  : void
+ 输出参数  : 无
+ 返 回 值  :
+ 调用函数  :
+ 被调函数  :
+
+ 修改历史      :
+  1.日    期   : 2018年11月9日
+    作    者   : zgj
+    修改内容   : 新生成函数
+
+*****************************************************************************/
+void com1_rxDeal(void)
+{
+    uint8 ch;
+    static uint8 check_sum = 0;
+    static uint8 index=0;
+    static uint8 st=0;
+	if(com_rxLeft(com1) != 0)
+	{
+		while(1)
+		{
+			if(OK == com_getch(com1,&ch))
+			{
+                switch(st)
+                {
+                    case RX_START_ST: //0x02
+                    {
+                        index = 0;
+                        if(ch != ComRx_START)
+                        {
+                            st=RX_START_ST;
+                            break;
+                        }
+                        check_sum = 0;
+                        com1buf.buf[index]=ch;
+                        index++;
+                        st=RX_SPARE1_ST;
+                        break;
+                    }
+                    case RX_SPARE1_ST://0x3A
+                    {
+                        if(ch == ComRx_START) //排重问题
+                        {
+                            index=0;
+                            com1buf.buf[index]=ch;
+                            index++;
+                            st=RX_SPARE1_ST;
+                        }
+                        else if(ch == ComRx_SPARE)
+                        {
+                            com1buf.buf[index]=ch;
+                            index++;
+                            st=RX_SPARE2_ST;
+                        }
+                        else
+                        {
+                           st=RX_START_ST;
+                        }
+                        break;
+                    }
+                    case RX_SPARE2_ST://0x01
+                    {
+                        if(ch == ComRx_ADDR)
+                        {
+                            check_sum =ch;
+                            com1buf.buf[index]=ch;
+                            index++;
+                            st=RX_DATA_ST;
+                        }
+                        else
+                        {
+                           st=RX_START_ST;
+                        }
+                        break;
+                    }
+                    case RX_DATA_ST: //dat
+                    {
+                        com1buf.buf[index]=ch;
+                        check_sum ^=ch;
+                        index++;
+                        if(index == 29)
+                        {
+                            st =RX_CHK_ST;
+                        }
+                        break;
+                    }
+                    case RX_CHK_ST: //check_sum
+                        {
+                            if(ch ==check_sum)
+                            {
+                                st=RX_END_ST;
+                                com1buf.buf[index]=ch;
+                                index++;
+                            }
+                            else
+                            {
+                               st=RX_START_ST;
+                            }
+                            break;
+                        }
+                    case RX_END_ST:
+                        {
+                            if(ch !=ComRx_END1)
+                            {
+                               st=RX_START_ST;
+                                break;
+                            }
+                            com1buf.buf[index]=ch;
+                            index++;
+                            st=RX_END_ST2;
+                            break;
+                        }
+                    case RX_END_ST2:
+                        {
+                            if(ch ==ComRx_END2)
+                            {
+                                com1buf.buf[index]=ch;
+                                //ShowPar.frame_ok_fag = 1;
+                                com1_txDeal();
+                            }
+                            st=RX_START_ST;
+                            break;
+                        }
+                    default:
+                        index = 0;
+                        st=RX_START_ST;
+                        break;
+                }
+			}
+			else{
+				break;
+			}
+		}
+	}
+}
+/*****************************************************************************
+ 函 数 名  : com1_txDeal
+ 功能描述  : com1应答处理
+ 输入参数  : void
+ 输出参数  : 无
+ 返 回 值  :
+ 调用函数  :
+ 被调函数  :
+
+ 修改历史      :
+  1.日    期   : 2018年11月9日
+    作    者   : zgj
+    修改内容   : 新生成函数
+
+*****************************************************************************/
+void com1_txDeal(void)
+{
+    //dbg("rx 32 ok\r\n");
+    com1buf.sta_num = ComTx_START;
+    com1buf.spare1= ComTx_SPARE;
+    com1buf.dev_addr = ComTx_ADDR;
+    com1buf.dat[0]=0;
+    com1buf.dat[1]=0;
+    com1buf.dat[8] = temp_arry[0];
+    com1buf.dat[9] = temp_arry[1];
+    com1buf.crc_num= CRC8_SUM(&com1buf.dev_addr, crc_len);
+    com1buf.end1_num= ComTx_END1;
+    com1buf.end2_num= ComTx_END2;
+    com_send_dat(com1,com1buf.buf, BUF_SIZE);
+}
 
 /*****************************************************************************
  函 数 名  : get_temperature
@@ -104,11 +306,11 @@ uint16 const temp_tab[tab_len] =    //表格是以5度为一步，即-30, -25, - 20.....
     修改内容   : 新生成函数
 
 *****************************************************************************/
-float get_temperature(uint8 ad_channel)
+uint8 get_temperature(uint8 ad_channel)
 {
     uint16 temp_ad = 0;
     uint8 left =0, right = tab_len-1,mid;
-    float temp;
+    uint8 temp;
     mid = (left+right)/2;
     Sel_Adc_Channel(ad_channel);   //选择ad通道
     temp_ad =read_tem_adc();
@@ -128,10 +330,11 @@ float get_temperature(uint8 ad_channel)
         }
         mid = (left+right)/2;
     }
-    temp = ((float)((temp_ad-temp_tab[left])*5)/(temp_tab[right]-temp_tab[left]))
+    temp = ((temp_ad-temp_tab[left])*5)/(temp_tab[right]-temp_tab[left])
             +(mid*5 -30);// 阀值转化成温度  放大10倍
     return temp;
 }
+
 
 float get_voltage(uint8 ad_channel)
 {
@@ -167,7 +370,7 @@ void if_init_state(void)
             break;
         case ST_INIT_FLOW_RUN:
             {
-                motor_run_pulse(FLOW_MOTOR,0,3200);
+                 motor_run_pulse(FLOW_MOTOR,0,3200);
                  SetOverTicks(10000);//5s
             }
             break;
@@ -304,7 +507,7 @@ void if_dbg_state(void)
 
 void TasktrIf(void)
 {
-    trIf_Execute();
+    //trIf_Execute();
 }
 
 
@@ -325,6 +528,12 @@ void TasktrIf(void)
 *****************************************************************************/
 void Taskpro(void)
 {
+
+    temp_arry[0] = get_temperature(ADC_TEMP_TAP);
+    temp_arry[1] = get_temperature(ADC_TEMP_SHOWER);
+    check_uart(com1);
+    //check_uart(com2);
+/*
     if(get_msgid() == SRC_MAIN)
     {
        switch (dev_mode)
@@ -357,6 +566,7 @@ void Taskpro(void)
                break;
        }
     }
+    */
 }
 
 
@@ -377,12 +587,13 @@ void set_msgid(uint8 id)
 void app_modeSet(uint8 mode)
 {
      dev_mode = mode;
-     dbg("mode :%d\r\n",dev_mode);
+     dbg("soft version:%s\r\n",soft_version);
+     dbg("mode->%d\r\n",dev_mode);
 }
 void app_stateSet(uint8 state)
 {
      dev_state= state;
-     dbg("state :%d\r\n",dev_state);
+     dbg("state->%d\r\n",dev_state);
 }
 
 

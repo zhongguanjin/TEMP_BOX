@@ -2,6 +2,7 @@
 #define _COM_H_
 
 #include "config.h"
+#include "uart.h"
 
 #define	CONSOLE_RX_BUF_LEN		64	// must 2**n
 #define	CONSOLE_RX_BUF_MASK	(CONSOLE_RX_BUF_LEN-1)
@@ -14,6 +15,9 @@
 #define RX_END_ST			5
 #define RX_END_ST2			6
 
+#define     M485_IO_OUT                        ( TRISB5 = 0 )
+#define     M485_EN_H                           ( LATB5 = 1 )
+#define     M485_EN_L                           ( LATB5 = 0 )
 
 typedef struct {
 	 uint8	in;
@@ -43,7 +47,9 @@ extern void com_init(COM_DEF COMx,uint32 baud);
 extern void USART1_RXHandler(uint8 dat);
 extern void USART2_RXHandler(uint8 dat);
 
-
+extern uint8 CRC8_SUM(void *p,uint8 len);
+extern void com_send_dat(COM_DEF comx,void *p,uint8 len);
+extern void check_uart(COM_DEF COMx);
 
 #endif
 

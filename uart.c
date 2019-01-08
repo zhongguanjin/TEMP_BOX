@@ -32,14 +32,14 @@
 void Init_UART1(uint32 baud)
 {
     RX1_PIN = 1;
-    TX1_PIN = 1;
+    TX1_PIN = 0;
 	//配置发送寄存器
     TX1STAbits.TX9D=0;      //无奇偶校验位
     TX1STAbits.TRMT=0;      //发送移位寄存器状态位  0-TSR 已满
     TX1STAbits.BRGH = 1;
     TX1STAbits.SYNC=0;
     TX1STAbits.TXEN=1;
-    TX1STAbits.TX9=0;       //发送8位
+    TX1STAbits.TX9=0;       //发送9位
 	//配置接收寄存器
     RC1STAbits.RX9D=0;      //无奇偶校验位
     RC1STAbits.OERR=0;
@@ -47,18 +47,26 @@ void Init_UART1(uint32 baud)
     RC1STAbits.ADDEN=0;
     RC1STAbits.CREN=1;      //连续接收使能位
     // RCSTA2bits.SREN=0;
-    RC1STAbits.RX9=0;       //接收8位
+    RC1STAbits.RX9=0;       //接收9位
     RC1STAbits.SPEN=1;      //串口使能位
-    SPBRG = (PIC_CLK/(16UL * baud) -1);      //波特率对应初值
+
+    BAUD1CONbits.BRG16 = 1;
+    SP1BRGL = (PIC_CLK/(4*baud) - 1 )%256;
+    SP1BRGH = (PIC_CLK/(4*baud) - 1)/256;
+    //SPBRG = (PIC_CLK/(16UL * baud) -1);      //波特率对应初值
     RCIE = 1;                //USART1 接收中断允许位
 	TXIE = 0;
 	RCIF = 0;
 }
 
+
+
 void Init_UART2(uint32 baud)
 {
     RX2_PIN = 1;
-    TX2_PIN = 1;
+    TX2_PIN = 0;
+    ANSG2= 0;
+    ANSG1= 0;
 	//配置发送寄存器
     TX2STAbits.TX9D=0;      //无奇偶校验位
     TX2STAbits.TRMT=0;      //发送移位寄存器状态位  0-TSR 已满
@@ -76,8 +84,12 @@ void Init_UART2(uint32 baud)
     RC2STAbits.RX9=0;       //接收8位
     RC2STAbits.SPEN=1;      //串口使能位
 
-    SPBRG2 = (PIC_CLK/(16UL * baud) -1);      //波特率对应初值
-    RC2IE = 1;                //USART1 接收中断允许位
+    BAUD2CONbits.BRG16 = 1;
+    SP2BRGL = (PIC_CLK/(4*baud) - 1 )%256;
+    SP2BRGH = (PIC_CLK/(4*baud) - 1)/256;
+
+    //SPBRG2 = (PIC_CLK/(16UL * baud) -1);      //波特率对应初值
+    RC2IE = 1;                //USART2 接收中断允许位
 	TX2IE = 0;
 	RC2IF = 0;
 }
@@ -115,6 +127,7 @@ void usart2_send_byte(char dat)
 	}
 
 }
+
 
 
 

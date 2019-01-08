@@ -1,10 +1,6 @@
 #include "rgb.h"
 
 
-void pwm_rgb_init(void)
-{
-
-}
 
 
 void rgb_init(void)

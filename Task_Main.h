@@ -15,7 +15,7 @@ typedef struct
 
 
 
-
+char soft_version[] = {"V1.2"};
 
 
 
@@ -26,11 +26,11 @@ extern void set_msgid(uint8 id);
 
 extern void TaskProcess(void);
 extern void TaskRemarks(void);
-extern float get_temperature(uint8 ad_channel);
+extern uint8 get_temperature(uint8 ad_channel);
 extern float get_voltage(uint8 ad_channel);
 extern void app_modeSet(uint8 mode);
 extern void app_stateSet(uint8 state);
 
-
+extern void com1_rxDeal(void);
 #endif
 
