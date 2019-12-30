@@ -8,10 +8,13 @@
 #include "stdio.h"
 #include "motor.h"
 #include "dbg.h"
-#include "SoftTimer.h"
 #include "stdlib.h"
 //#include "pulse.h"
 #include "timer.h"
+
+//#include "SoftTimer.h"
+
+
 #define tab_len  29
 
 /*0-空闲 1-初始化 2,工作*/
@@ -152,13 +155,14 @@ void SetOverTicks(uint32 ticks)
 
 void if_init_state(void)
 {
-    TIMER_TABLE* ptnode;
-    switch ( dev_state)
-    {
-        case ST_INIT_INIT:
-            {
-              ptnode=CreatTimer(1000, PERIOIC, if_init_timer, NULL);
-            }
+    //TIMER_TABLE* ptnode;
+     switch ( dev_state)
+     {
+         case ST_INIT_INIT:
+             {
+              //ptnode=CreatTimer(1000, PERIOIC, if_init_timer, NULL);
+
+             }
             break;
         case ST_INIT_TEMP_RUN:
             {
@@ -176,8 +180,8 @@ void if_init_state(void)
             {
                 app_stateSet(ST_DBG_INIT);
                 app_modeSet(MODE_DBG);
-                //KillTimer(ptnode);
                 set_msgid(SRC_MAIN);
+                //KillTimer(ptnode);
             }
             break;
         default:
@@ -269,13 +273,13 @@ int if_dbg_timer(void *pArg)
 
 void if_dbg_state(void)
 {
-    TIMER_TABLE* ptnode;
-    switch (dev_state)
-    {
-        case ST_DBG_INIT:
-            {
-                ptnode=CreatTimer(1000, PERIOIC, if_dbg_timer, NULL);
-            }
+    //TIMER_TABLE* ptnode;
+     switch (dev_state)
+     {
+         case ST_DBG_INIT:
+             {
+                //ptnode=CreatTimer(1000, PERIOIC, if_dbg_timer, NULL);
+             }
             break;
         case ST_DBG_RUN:
             {

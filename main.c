@@ -9,7 +9,8 @@
 #include "DRV8837.h"
 #include "com.h"
 #include "console.h"
-#include "SoftTimer.h"
+//#include "SoftTimer.h"
+
 #include "rgb.h"
 
 //#include "pulse.h"
@@ -66,7 +67,7 @@ void main(void)
 {
 	Init_Sys();
 	dbg("SYSCLK:%dM\r\n",SYSCLK_Frequency);
-	TimersInit(SystemTicksCount);
+	//TimersInit(SystemTicksCount);
 	app_modeSet(1);
 	while(1)
 	{
