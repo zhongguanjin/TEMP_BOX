@@ -67,12 +67,6 @@ void Init_TMR2(void)
     TMR2IF =0;
 }
 
-uint32 SystemTicksCount(void)
-{
-   static uint32 tick_time1=0;
-   tick_time1++;
 
-   return tick_time1;
-}
 
 

@@ -12,7 +12,7 @@
 //#include "pulse.h"
 #include "timer.h"
 
-//#include "SoftTimer.h"
+#include "SoftTimer.h"
 
 
 #define tab_len  29
@@ -52,6 +52,7 @@ uint8 msg_id = SRC_MAIN;
 
 
 void Taskpro(void);
+void TasktrIf(void);
 
 
 
@@ -73,6 +74,7 @@ void SetOverTicks(uint32 ticks);
 static TASK_COMPONENTS TaskComps[] =
 {
     {0, 100, 100, Taskpro},
+    {0, 10, 10, TasktrIf},
 
 };
 // 任务清单
@@ -80,6 +82,7 @@ typedef enum _TASK_LIST
 {
 
     TAST_PRO,             //
+    TASK_TRIF,
     TASKS_MAX                // 总的可供分配的定时任务数目
 } TASK_LIST;
 
@@ -161,7 +164,8 @@ void if_init_state(void)
          case ST_INIT_INIT:
              {
               //ptnode=CreatTimer(1000, PERIOIC, if_init_timer, NULL);
-
+                  trIf_Init(SRC_MAIN, if_init_timer);
+                  trIf_start(SRC_MAIN, 1000, TIMER_PERIOD);// 1000ms
              }
             break;
         case ST_INIT_TEMP_RUN:
@@ -182,6 +186,7 @@ void if_init_state(void)
                 app_modeSet(MODE_DBG);
                 set_msgid(SRC_MAIN);
                 //KillTimer(ptnode);
+                trIf_stop(SRC_MAIN);
             }
             break;
         default:
@@ -279,6 +284,8 @@ void if_dbg_state(void)
          case ST_DBG_INIT:
              {
                 //ptnode=CreatTimer(1000, PERIOIC, if_dbg_timer, NULL);
+                trIf_Init(SRC_MAIN, if_dbg_timer);
+                trIf_start(SRC_MAIN, 2000, TIMER_PERIOD);// 1000ms
              }
             break;
         case ST_DBG_RUN:
@@ -299,6 +306,7 @@ void if_dbg_state(void)
         default:
             {
                 //KillTimer(ptnode);
+                trIf_stop(SRC_MAIN);
             }
             break;
     }
@@ -307,7 +315,10 @@ void if_dbg_state(void)
 
 
 
-
+void TasktrIf(void)
+{
+    trIf_Execute();
+}
 
 /*****************************************************************************
  函 数 名  : Taskpro
@@ -385,6 +396,7 @@ void app_stateSet(uint8 state)
      dev_state= state;
      dbg("state :%d\r\n",dev_state);
 }
+
 
 
 

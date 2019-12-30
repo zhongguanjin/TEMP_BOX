@@ -9,7 +9,7 @@
 #include "DRV8837.h"
 #include "com.h"
 #include "console.h"
-//#include "SoftTimer.h"
+#include "SoftTimer.h"
 
 #include "rgb.h"
 
