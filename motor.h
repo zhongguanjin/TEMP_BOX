@@ -30,22 +30,9 @@ typedef struct
 
 PM_MOTOR PM[MOTOR_MAX];
 
-enum
-{
-    GEAR_100=0,
-    GEAR_90,
-    GEAR_80,
-    GEAR_70,
-    GEAR_60,
-    GEAR_50,
-    GEAR_40,
-    GEAR_30,
-    GEAR_20,
-    GEAR_10,
-    GEAR_MAX
-};
 
-const uint8 speed[GEAR_MAX] ={100,90,80,70,60,50,40,30,20,10};
+
+//const uint8 speed[20] ={250,240,230,220,210,200,190,180,170,160,150,140,130,120,110,100,90,80,70,60};
 
 typedef enum
 {

@@ -13,9 +13,15 @@
 #include "timer.h"
 
 #include "SoftTimer.h"
+#include "com.h"
+#include "DRV8837.h"
 
 
 #define tab_len  29
+
+ComBuf_t com1buf;
+
+
 
 /*0-空闲 1-初始化 2,工作*/
 enum {
@@ -53,7 +59,7 @@ uint8 msg_id = SRC_MAIN;
 
 void Taskpro(void);
 void TasktrIf(void);
-
+void TaskCom(void);
 
 
 
@@ -66,25 +72,22 @@ void if_dbg_state(void);
 
 void SetOverTicks(uint32 ticks);
 
+void PanelTxDeal(void);
+
+void PanelRxDeal(void);
 
 
-
+#define TASKS_MAX  3
 
 // 定义结构体变量
 static TASK_COMPONENTS TaskComps[] =
 {
     {0, 100, 100, Taskpro},
     {0, 10, 10, TasktrIf},
+    {0, 100, 100, TaskCom},
 
 };
-// 任务清单
-typedef enum _TASK_LIST
-{
 
-    TAST_PRO,             //
-    TASK_TRIF,
-    TASKS_MAX                // 总的可供分配的定时任务数目
-} TASK_LIST;
 
 
 
@@ -171,13 +174,13 @@ void if_init_state(void)
         case ST_INIT_TEMP_RUN:
             {
                 motor_run_pulse(TEMP_MOTOR,0,3200);
-                SetOverTicks(10000);//5s
+                SetOverTicks(20000);//10s
             }
             break;
         case ST_INIT_FLOW_RUN:
             {
                 motor_run_pulse(FLOW_MOTOR,0,3200);
-                 SetOverTicks(10000);//5s
+                 SetOverTicks(20000);//10s
             }
             break;
         case ST_INIT_END:
@@ -320,6 +323,14 @@ void TasktrIf(void)
     trIf_Execute();
 }
 
+
+
+
+void TaskCom(void)
+{
+    PanelTxDeal();
+}
+
 /*****************************************************************************
  函 数 名  : Taskpro
  功能描述  : 进程任务
@@ -372,12 +383,195 @@ void Taskpro(void)
 }
 
 
+/*****************************************************************************
+ 函 数 名  : com1_rxDeal
+ 功能描述  : com1接收数据处理
+ 输入参数  : void
+ 输出参数  : 无
+ 返 回 值  :
+ 调用函数  :
+ 被调函数  :
 
+ 修改历史      :
+  1.日    期   : 2018年7月9日 星期一
+    作    者   : zgj
+    修改内容   : 新生成函数
+
+*****************************************************************************/
+void com1_rxDeal(void)
+{
+    char ch;
+    static uint8 check_sum = 0;
+    static uint8 index=0;
+    static uint8 st=0;
+    if(com_rxLeft(com1) != 0)
+    {
+        while(1)
+        {
+            if(OK == com_getch(com1,&ch))
+            {
+                switch(st)
+                {
+                    case RX_START_ST: //0x02
+                    {
+                        index = 0;
+                        if(ch != ComRx_START)
+                        {
+                            st=RX_START_ST;
+                            break;
+                        }
+                        check_sum = 0;
+                        com1buf.buf[index]=ch;
+                        index++;
+                        st=RX_SPARE1_ST;
+                        break;
+                    }
+                    case RX_SPARE1_ST://0x3A
+                    {
+                        if(ch == ComRx_START) //排重问题
+                        {
+                            index=0;
+                            com1buf.buf[index]=ch;
+                            index++;
+                            st=RX_SPARE1_ST;
+                        }
+                        else if(ch == ComRx_SPARE)
+                        {
+                            com1buf.buf[index]=ch;
+                            index++;
+                            st=RX_SPARE2_ST;
+                        }
+                        else
+                        {
+                           st=RX_START_ST;
+                        }
+                        break;
+                    }
+                    case RX_SPARE2_ST://0x01
+                    {
+                        if(ch == ComRx_ADDR)//0x01 boot地址
+                        {
+                            check_sum =ch;
+                            com1buf.buf[index]=ch;
+                            index++;
+                            st=RX_DATA_ST;
+                        }
+                        else
+                        {
+                           st=RX_START_ST;
+                        }
+                        break;
+                    }
+                    case RX_DATA_ST: //dat
+                    {
+                        com1buf.buf[index]=ch;
+                        check_sum ^=ch;
+                        index++;
+                        if(index == 29)
+                        {
+                            st =RX_CHK_ST;
+                        }
+                        break;
+                    }
+                    case RX_CHK_ST: //check_sum
+                    {
+                        if(ch ==check_sum)
+                        {
+                            st=RX_END_ST;
+                            com1buf.buf[index]=ch;
+                            index++;
+                        }
+                        else
+                        {
+                           st=RX_START_ST;
+                        }
+                        break;
+                    }
+                    case RX_END_ST:
+                    {
+                        if(ch !=ComRx_END1)
+                        {
+                           st=RX_START_ST;
+                            break;
+                        }
+                        com1buf.buf[index]=ch;
+                        index++;
+                        st=RX_END_ST2;
+                        break;
+                    }
+                    case RX_END_ST2:
+                    {
+                        if(ch ==ComRx_END2)
+                        {
+                            com1buf.buf[index]=ch;
+                            PanelRxDeal();
+                        }
+                        st=RX_START_ST;
+                        break;
+                    }
+                    default:
+                    {
+                        index = 0;
+                        st=RX_START_ST;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+}
+
+/*****************************************************************************
+ 函 数 名  : PanelRxDeal
+ 功能描述  : 应答处理
+ 输入参数  : void
+ 输出参数  : 无
+ 返 回 值  :
+ 调用函数  :
+ 被调函数  :
+
+ 修改历史      :
+  1.日    期   : 2018年11月9日
+    作    者   : zgj
+    修改内容   : 新生成函数
+
+*****************************************************************************/
+void PanelRxDeal(void)
+{
+    switch(com1buf.buf[3])
+    {
+        case 0x01:            //开关键
+        {
+           drv8837_ctr(DRV8837_TAP, com1buf.buf[4]);
+           com1buf.buf[12]=com1buf.buf[4];
+           break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+}
+
+void PanelTxDeal(void)
+{
+    com1buf.sta_num = ComTx_START;
+    com1buf.spare1= ComTx_SPARE;
+    com1buf.dev_addr = ComTx_ADDR;
+    com1buf.crc_num= CRC8_SUM(&com1buf.dev_addr, crc_len);
+    com1buf.end1_num= ComTx_END1;
+    com1buf.end2_num= ComTx_END2;
+    com_send_485(com1,com1buf.buf, BUF_SIZE);
+}
 
 
 uint8 get_msgid(void)
 {
-
     return msg_id;
 }
 

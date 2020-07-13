@@ -12,6 +12,7 @@ void motor_st_pro(void);
 
 void motor_set_delay(int32 dat)
 {
+
     PR6 = dat/2;
     TMR6IE = 1;
 }
@@ -36,9 +37,9 @@ void motor_move(MOTOR_DEF mid,uint8 dir,uint32 pules)
            motor_dir_set(TEMP_MOTOR, CCW);
            PM[mid].bDirCur = CCW;
         }
-        srd.min_delay = A_T/V_max;                                      //设置最大速度极限, 计算得到min_delay用于定时器的计数器的值。
+        srd.min_delay = (int32)A_T/V_max;                                      //设置最大速度极限, 计算得到min_delay用于定时器的计数器的值。
 
-        srd.step_delay = (int32)((T_FREQ_148 * sqrt(A_SQ / accel)));   //通过计算第一个(c0) 的步进延时来设定加速度
+        srd.step_delay = (int32)((T_FREQ_148* sqrt(A_SQ / accel)));   //通过计算第一个(c0) 的步进延时来设定加速度
 
         max_s_lim = (uint32)(V_max*V_max/(A_SQ*accel));                //加速到最大速度所需的步数
 
@@ -55,11 +56,11 @@ void motor_move(MOTOR_DEF mid,uint8 dir,uint32 pules)
         // 使用限制条件我们可以计算出减速阶段步数
         if(accel_lim <= max_s_lim)
         {
-           srd.decel_val = accel_lim - pules;
+           srd.decel_val = pules - accel_lim;
         }
         else
         {
-           srd.decel_val = -(max_s_lim*accel/decel);
+           srd.decel_val = max_s_lim*accel/decel;
         }
         // 当只剩下一步我们必须减速
         if(srd.decel_val == 0)
@@ -67,7 +68,7 @@ void motor_move(MOTOR_DEF mid,uint8 dir,uint32 pules)
            srd.decel_val = -1;
         }
         // 计算开始减速时的步数
-        srd.decel_start = pules + srd.decel_val;
+        srd.decel_start = pules - srd.decel_val;
         // 如果最大速度很慢，我们就不需要进行加速运动
         if(srd.step_delay <= srd.min_delay)
         {
@@ -78,6 +79,9 @@ void motor_move(MOTOR_DEF mid,uint8 dir,uint32 pules)
         {
            srd.pm_st = ST_ACCEL;
         }
+        dbg("min_delay:%l,step_delay:%l,max_s_lim:%l\r\n",srd.min_delay,srd.step_delay,max_s_lim);
+        dbg("decel_start:%l,decel_val:%l,accel_lim:%l\r\n",srd.decel_start, srd.decel_val,accel_lim);
+
         // 复位加速度计数值
         srd.accel_count = 0;
         motor_set_delay(srd.step_delay);
@@ -114,7 +118,7 @@ void motor_st_pro(void)
       case ST_ACCEL:
         step_count++;      // 步数加1
         srd.accel_count++; // 加速计数值加1
-        new_step_delay = srd.step_delay - (((2 *srd.step_delay) + rest)/(4 * srd.accel_count + 1));//计算新(下)一步脉冲周期(时间间隔)
+        new_step_delay = srd.step_delay - (((2 *srd.step_delay) + rest)/(4* srd.accel_count + 1));//计算新(下)一步脉冲周期(时间间隔)
         rest = ((2 * srd.step_delay)+rest)%(4 * srd.accel_count + 1);// 计算余数，下次计算补上余数，减少误差
         if(step_count >= srd.decel_start)// 检查是够应该开始减速
         {
@@ -141,11 +145,11 @@ void motor_st_pro(void)
         break;
       case ST_DECEL:
         step_count++;  // 步数加1
-        srd.accel_count++;
-        new_step_delay = srd.step_delay - (((2 * srd.step_delay) + rest)/(4 * srd.accel_count + 1)); //计算新(下)一步脉冲周期(时间间隔)
+        srd.accel_count--;
+        new_step_delay = srd.step_delay + (((2 * srd.step_delay) + rest)/(4 * srd.accel_count + 1)); //计算新(下)一步脉冲周期(时间间隔)
         rest = ((2 * srd.step_delay)+rest)%(4 * srd.accel_count + 1);// 计算余数，下次计算补上余数，减少误差
         //检查是否为最后一步
-        if(srd.accel_count >= 0)
+        if(srd.accel_count == 0)
         {
             srd.pm_st = ST_STOP;
 	        step_count = 0;  // 清零步数计数器
@@ -178,7 +182,6 @@ void TaskMotorISR(void)
     }
     if(ia==2)
     {
-        //TMR6IE = 0;
         ia=0;
         if(PM[TEMP_MOTOR].cnt != PM[TEMP_MOTOR].set)
         {
@@ -187,15 +190,18 @@ void TaskMotorISR(void)
             if(srd.pm_st == ST_STOP)
             {
                 motor_stop(TEMP_MOTOR);
+                TMR6IE = 0;
             }
             else
             {
+                //dbg("%d",srd.step_delay);
                 motor_set_delay(srd.step_delay);
             }
         }
         else
         {
             motor_stop(TEMP_MOTOR);
+            TMR6IE = 0;
         }
     }
 }

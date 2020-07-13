@@ -21,7 +21,6 @@ void Init_Motor(void)
 {
     A4982_FLOW_IOS_OUTPUT();
     A4982_TEMP_IOS_OUTPUT();
-    motor_speed_set(GEAR_50);
     //温度电机配置
     TEMP_MOTOR_EN = 0;                           //电机使能
     motor_step_set(TEMP_MOTOR,MICROSTEP_1_16); //1                                        // 1/16步
@@ -218,7 +217,7 @@ void motor_setPlace(MOTOR_DEF mid,uint32 place)
 *****************************************************************************/
 void motor_run_pulse(MOTOR_DEF mid,uint16 dir,uint32 pulse)
 {
-    dbg("mp%d,d%d,p%l\r\n",mid,dir,pulse);
+    dbg("mp-%d,d-%d,p-%l\r\n",mid,dir,pulse);
     if(PM[mid].bRunFlg != ON) //不在运行
     {
         if(mid == FLOW_MOTOR)
@@ -327,8 +326,9 @@ uint32 motor_getPulse(MOTOR_DEF mid)
 
 void motor_speed_set(uint8 gear)
 {
-    PR6 = speed[gear];
-    dbg("speed:%d\r\n",speed[gear]);
+    //PR6 = speed[gear];
+    PR6 = 50;
+    //dbg("speed:%d\r\n",speed[gear]);
     TMR6IE =1;
 }
 

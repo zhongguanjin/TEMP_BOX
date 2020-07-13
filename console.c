@@ -10,7 +10,7 @@
 
 #include "DRV8837.h"
 #include "rgb.h"
-//#include "pulse.h"
+#include "pulse.h"
 consoleCallback console_cb = NULL;
 
 
@@ -233,8 +233,8 @@ int cs_motorTest(char * buf, int len)
 		case 2:
 		{
 		    dbg("2-run\r\n");
-		    //motor_move(para.MID,para.DIR,para.PULSE);
-		    motor_run_pulse(para.MID,para.DIR,para.PULSE);
+		    motor_move(para.MID,para.DIR,para.PULSE);
+		    //motor_run_pulse(para.MID,para.DIR,para.PULSE);
 			break;
 		}
 		case 3:
@@ -315,7 +315,7 @@ void cs_motorMenu(void)
 	dbg("mid: 0-flow motor,1-temp motor\r\n");
 	dbg("dir: 0-POS,1-REV\r\n");
 	dbg("pulse: step \r\n");
-	dbg("gear: 0-9 \r\n");
+	dbg("gear: 0-19 \r\n");
 
 	dbg("motor>\r\n");
 }

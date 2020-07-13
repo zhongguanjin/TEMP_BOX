@@ -13,7 +13,7 @@
 
 #include "rgb.h"
 
-//#include "pulse.h"
+#include "pulse.h"
 
 
 /*****************************************************************************
@@ -36,7 +36,8 @@ void Init_Sys(void)
 	Init_MCU();
 	Init_ADC();
 	rgb_init();
-	com_init(com2,9600);
+	//com_init(com2,9600);
+	com_init(com1,19200);
 	Init_TMR0();
 	Init_TMR6();
 	Init_Motor();
@@ -67,12 +68,17 @@ void main(void)
 {
 	Init_Sys();
 	dbg("SYSCLK:%dM\r\n",SYSCLK_Frequency);
+	delay_ms(2000);
+    CLRWDT();
+	delay_ms(2000);
+    CLRWDT();
 	//TimersInit(SystemTicksCount);
-	app_modeSet(1);
+	app_modeSet(0);
 	while(1)
 	{
 	    //ProcessTimer();
-	    com2_rxDeal();
+	    com1_rxDeal();
+	    //com2_rxDeal();
 	    TaskProcess();            // 任务处理
 	    CLRWDT();
 	}
@@ -95,10 +101,15 @@ void main(void)
 *****************************************************************************/
 void interrupt ISR(void)
 {
+    if(RCIE &&RCIF)
+    {
+        RCIF= 0;
+        USART1_RXHandler(RCREG);
+    }
     if(RC2IE &&RC2IF)
     {
         RC2IF= 0;
-        USART2_RXHandler(RC2REG);
+        //USART2_RXHandler(RC2REG);
     }
 	if (TMR6IF && TMR6IE) // 200us 中断一次
 	{
