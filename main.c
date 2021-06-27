@@ -68,6 +68,7 @@ void main(void)
 {
 	Init_Sys();
 	dbg("SYSCLK:%dM\r\n",SYSCLK_Frequency);
+dbg("new_fun");
 	delay_ms(2000);
     CLRWDT();
 	delay_ms(2000);
